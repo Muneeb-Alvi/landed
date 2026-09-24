@@ -6,7 +6,7 @@
 > 真正的落地，不是拿到录取通知书，而是下一步永远心里有数。
 > Real arrival isn't getting the offer letter. It's knowing your next step before you need it.
 
-**Live demo:** https://REPLACE_OWNER.github.io/landed/
+**Live demo:** https://muneeb-alvi.github.io/landed/
 
 ---
 
