@@ -172,3 +172,30 @@ export const FileSearch = (p) => (
     <path d="M18.2 18.2L21 21" />
   </Svg>
 )
+
+export const Menu = (p) => (
+  <Svg {...p}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </Svg>
+)
+
+export const Download = (p) => (
+  <Svg {...p}>
+    <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />
+  </Svg>
+)
+
+export const Printer = (p) => (
+  <Svg {...p}>
+    <path d="M7 8V3.5h10V8" />
+    <rect x="3.5" y="8" width="17" height="8.5" rx="1" />
+    <path d="M7 14h10v6.5H7z" />
+  </Svg>
+)
+
+export const FileText = (p) => (
+  <Svg {...p}>
+    <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z" />
+    <path d="M14 3v5h5M8.5 13h7M8.5 17h7" />
+  </Svg>
+)

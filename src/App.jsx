@@ -1,14 +1,21 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
-import { Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import Landing from './screens/Landing.jsx'
 import Onboarding from './screens/Onboarding.jsx'
 import RoadmapScreen from './screens/Roadmap.jsx'
 import StepDetail from './screens/StepDetail.jsx'
-import CheckDocument from './screens/CheckDocument.jsx'
-import { Toast } from './components/Chrome.jsx'
+import { AppContext } from './components/AppContext.js'
+import { Loading, Toast } from './components/Chrome.jsx'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 import { buildRoadmap, newCustomId, stepNotes } from './lib/roadmap.js'
-import { useStored } from './lib/storage.js'
+import { clearAll, defaultFor, useStored } from './lib/storage.js'
 import { toISODay, today } from './lib/date.js'
+
+// Tools off the main path load on demand.
+const CheckDocument = lazy(() => import('./screens/CheckDocument.jsx'))
+const About = lazy(() => import('./screens/About.jsx'))
+
+const HTML_LANG = { zh: 'zh-CN', en: 'en', both: 'zh-CN' }
 
 export default function App() {
   const navigate = useNavigate()
@@ -22,6 +29,19 @@ export default function App() {
   const [myNotes, setMyNotes] = useStored('myNotes')
   const [followUps, setFollowUps] = useStored('followUps')
   const [tips, setTips] = useStored('tips')
+  const [docs, setDocs] = useStored('docs')
+  const [lang, setLang] = useStored('lang')
+
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
+  useEffect(() => {
+    const html = document.documentElement
+    html.dataset.lang = lang
+    html.lang = HTML_LANG[lang] || 'zh-CN'
+  }, [lang])
 
   const [toast, setToast] = useState(null)
   const toastSeq = useRef(0)
@@ -46,6 +66,7 @@ export default function App() {
   const actions = {
     toggleStep: toggle(setChecked),
     toggleUpvote: toggle(setUpvotes),
+    toggleDoc: toggle(setDocs),
     toggleFlag: toggle(setFlags),
 
     hideStep(step) {
@@ -124,15 +145,47 @@ export default function App() {
     },
   }
 
+  const startOver = () => {
+    clearAll()
+    const resets = [
+      [setAnswers, 'answers'],
+      [setChecked, 'checked'],
+      [setUpvotes, 'upvotes'],
+      [setFlags, 'flags'],
+      [setHidden, 'hidden'],
+      [setDue, 'due'],
+      [setCustom, 'custom'],
+      [setMyNotes, 'myNotes'],
+      [setFollowUps, 'followUps'],
+      [setTips, 'tips'],
+      [setDocs, 'docs'],
+    ]
+    resets.forEach(([set, name]) => set(defaultFor(name)))
+    navigate('/')
+    showToast({ zh: '已清除所有数据', en: 'All data cleared from this device' })
+  }
+
+  const context = {
+    lang,
+    setLang,
+    hasRoadmap: !!roadmap,
+    go: (to) => navigate(to),
+    startOver,
+  }
+
   return (
-    <>
+    <AppContext.Provider value={context}>
+      <ErrorBoundary onReset={startOver}>
+      <Suspense fallback={<Loading />}>
       <Routes>
         <Route
           path="/"
           element={
             <Landing
               hasRoadmap={!!roadmap}
-              onStart={() => navigate('/onboarding')}
+              onStart={(persona) =>
+                navigate(persona ? `/onboarding?persona=${persona}` : '/onboarding')
+              }
               onResume={() => navigate('/roadmap')}
             />
           }
@@ -157,6 +210,7 @@ export default function App() {
               <RoadmapScreen
                 answers={answers}
                 roadmap={roadmap}
+                docs={docs}
                 actions={actions}
                 onOpen={(id) => navigate(`/step/${id}`)}
                 onEdit={() => navigate('/onboarding')}
@@ -182,11 +236,20 @@ export default function App() {
             />
           }
         />
-        <Route path="/check" element={<CheckDocument onBack={() => navigate(roadmap ? '/roadmap' : '/')} />} />
+        <Route
+          path="/check"
+          element={<CheckDocument onBack={() => navigate(roadmap ? '/roadmap' : '/')} />}
+        />
+        <Route
+          path="/about"
+          element={<About onBack={() => navigate(roadmap ? '/roadmap' : '/')} />}
+        />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </Suspense>
+      </ErrorBoundary>
       <Toast toast={toast} onDismiss={dismissToast} />
-    </>
+    </AppContext.Provider>
   )
 }
 

@@ -9,12 +9,17 @@ import {
   Clock,
   Close,
   Coins,
+  Download,
   EyeOff,
   FileSearch,
   Plus,
+  Printer,
   Refresh,
 } from '../components/Icons.jsx'
+import { useTitle } from '../components/AppContext.js'
+import { documentsFor } from '../data/documents.js'
 import { ANSWER_LABELS } from '../data/labels.js'
+import { buildICS, downloadICS } from '../lib/ics.js'
 import { STAGES } from '../data/stages.js'
 import { formatDay, formatShort, toISODay } from '../lib/date.js'
 import { daysLabel, flagSummary, formatRange, LATE_ARRIVAL_DAYS } from '../lib/roadmap.js'
@@ -63,8 +68,14 @@ function ThisWeek({ roadmap, onToggle, onOpen }) {
               <li key={s.id} className={s.done ? 'done' : ''}>
                 <CheckBox step={s} onToggle={onToggle} />
                 <button type="button" className="tw-open" onClick={() => onOpen(s.id)}>
-                  <span className="tw-step-zh">{s.titleZh}</span>
-                  <span className="tw-step-en">{s.titleEn}</span>
+                  {s.custom ? (
+                    <span className="tw-step-custom">{s.titleEn}</span>
+                  ) : (
+                    <>
+                      <span className="tw-step-zh">{s.titleZh}</span>
+                      <span className="tw-step-en">{s.titleEn}</span>
+                    </>
+                  )}
                 </button>
                 <span className={`tw-days ${d.tone}`}>{d.text}</span>
               </li>
@@ -347,8 +358,176 @@ function FoldList({ id, icon, zh, en, steps, onOpen, renderAction, renderNote })
   )
 }
 
-export default function Roadmap({ answers, roadmap, actions, onOpen, onEdit, onCheck }) {
-  const { nextStep, lateArrival, cashflow } = roadmap
+/** 证件清单 — documents the steps on this roadmap ask for. */
+function DocChecklist({ steps, docs, onToggle, onOpen }) {
+  const list = documentsFor(steps)
+  if (list.length === 0) return null
+  const have = list.filter((d) => docs[d.id]).length
+  return (
+    <section className="card doc-list" aria-labelledby="docs-title">
+      <div className="doc-head">
+        <Bilingual zh="证件清单" en="Document checklist" size="sm" as="h2" id="docs-title" />
+        <span className="s-count doc-count">
+          {have}/{list.length}
+        </span>
+      </div>
+      <p className="field-hint" style={{ margin: '4px 0 8px' }}>
+        Sample list drawn from the steps below — confirm against official requirements.
+      </p>
+      <ul>
+        {list.map((d) => (
+          <li key={d.id} className={`doc-row${docs[d.id] ? ' done' : ''}`}>
+            <button
+              type="button"
+              className="step-check"
+              role="checkbox"
+              aria-checked={!!docs[d.id]}
+              aria-label={`I have: ${d.en}`}
+              onClick={() => onToggle(d.id)}
+            >
+              <span className={`box${docs[d.id] ? ' checked' : ''}`}>
+                {docs[d.id] && <Check size={16} color="var(--accent)" className="tick" />}
+              </span>
+            </button>
+            <span className="doc-text">
+              <span className="doc-zh lz">{d.zh}</span>
+              <span className="doc-en le">{d.en}</span>
+              <span className="doc-hint">{d.hint}</span>
+              <span className="doc-for">
+                <span className="doc-for-label">
+                  <L zh="用于" en="For" />
+                </span>
+                {d.steps.map((s) => (
+                  <button key={s.id} type="button" className="doc-step" onClick={() => onOpen(s.id)}>
+                    {s.titleEn}
+                  </button>
+                ))}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+function Countdown({ step }) {
+  if (!step) return null
+  return (
+    <div className="countdown">
+      <p className="card-label">
+        <L zh="下一个截止" en="Next deadline" />
+      </p>
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+        <div>
+          <p className="cd-num">{step.daysLeft < 0 ? `+${Math.abs(step.daysLeft)}` : step.daysLeft}</p>
+          <p className="mono on-ink-muted" style={{ marginTop: 4 }}>
+            {step.daysLeft < 0 ? 'days over' : 'days left'}
+          </p>
+        </div>
+        <div style={{ flex: 1 }}>
+          {step.custom ? (
+            <p className="cd-step-custom">{step.titleEn}</p>
+          ) : (
+            <>
+              <p className="cd-step-zh">{step.titleZh}</p>
+              <p className="cd-step-en">{step.titleEn}</p>
+            </>
+          )}
+          <p className="mono on-ink-muted" style={{ marginTop: 8 }}>
+            {formatDay(step.deadline)}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Costs({ roadmap }) {
+  const pct = roadmap.totalCount ? (roadmap.doneCount / roadmap.totalCount) * 100 : 0
+  return (
+    <>
+      <div className="summary-grid">
+        <div className="stat">
+          <p className="card-label">
+            <Coins size={13} /> <L zh="行前" en="Before you fly" />
+          </p>
+          <p className="stat-num">{formatRange(roadmap.preArrivalCost)}</p>
+          <p className="stat-sub">CNY · sample</p>
+        </div>
+        <div className="stat">
+          <p className="card-label">
+            <Coins size={13} /> <L zh="落地30天" en="First 30 days" />
+          </p>
+          <p className="stat-num">{formatRange(roadmap.firstThirtyCost)}</p>
+          <p className="stat-sub">CNY · sample</p>
+        </div>
+      </div>
+      {roadmap.laterCost[1] > 0 && (
+        <p className="later-cost">
+          <L zh="30天之后" en="After day 30" /> · {formatRange(roadmap.laterCost)}
+        </p>
+      )}
+
+      <div className="stat" style={{ marginBottom: 14 }}>
+        <p className="card-label">
+          <Check size={13} /> <L zh="进度" en="Progress" />
+        </p>
+        <p className="stat-num">
+          {roadmap.doneCount}
+          <span style={{ fontSize: 20, color: 'var(--muted)' }}> / {roadmap.totalCount}</span>
+        </p>
+        <div
+          className="progress-track on-paper"
+          style={{ marginTop: 10 }}
+          role="progressbar"
+          aria-label="Steps done"
+          aria-valuemin={0}
+          aria-valuemax={roadmap.totalCount}
+          aria-valuenow={roadmap.doneCount}
+        >
+          <div className="progress-fill" style={{ width: `${pct}%` }} />
+        </div>
+        <p className="stat-sub">
+          {roadmap.overdueCount > 0
+            ? `${roadmap.overdueCount} overdue · saved on this device`
+            : 'Saved on this device'}
+        </p>
+      </div>
+    </>
+  )
+}
+
+function Tools({ roadmap, onEdit }) {
+  const unfinished = roadmap.steps.filter((s) => !s.done)
+  const exportCalendar = () =>
+    downloadICS(buildICS(unfinished, { now: new Date() }), 'landed-deadlines.ics')
+  return (
+    <div className="rm-tools" aria-label="Roadmap tools">
+      <button
+        type="button"
+        className="btn secondary small"
+        onClick={exportCalendar}
+        disabled={unfinished.length === 0}
+      >
+        <Download size={18} />
+        <L zh="加入日历" en="Add deadlines to calendar" />
+      </button>
+      <button type="button" className="btn secondary small" onClick={() => window.print()}>
+        <Printer size={18} />
+        <L zh="打印 / 存为PDF" en="Print / Save as PDF" />
+      </button>
+      <button type="button" className="btn secondary small" onClick={onEdit}>
+        <Refresh size={18} />
+        <L zh="修改答案" en="Edit answers" />
+      </button>
+    </div>
+  )
+}
+
+export default function Roadmap({ answers, roadmap, docs, actions, onOpen, onEdit, onCheck }) {
+  useTitle('My roadmap')
+  const { lateArrival, cashflow } = roadmap
   const [openStages, setOpenStages] = useState(() => initialOpenStages(roadmap))
   const [adding, setAdding] = useState(false)
   const allOpen = roadmap.byStage.every((st) => openStages.has(st.id))
@@ -367,231 +546,197 @@ export default function Roadmap({ answers, roadmap, actions, onOpen, onEdit, onC
     <div className="shell">
       <SampleBanner />
       <AppBar />
+      <main id="main" tabIndex={-1}>
 
-      <div className="band">
-        <Bilingual zh="我的路线图" en="My roadmap" onInk as="h1" />
-        <div className="answer-pills">
-          {['degree', 'campus', 'funding', 'housing', 'region'].map((k) => (
-            <span key={k} className="answer-pill">
-              <L zh={ANSWER_LABELS[k][answers[k]].zh} en={ANSWER_LABELS[k][answers[k]].en} sep=" " />
-            </span>
-          ))}
-          {answers.family && (
-            <span className="answer-pill pill-accent">
-              <L zh="家属同行" en="With family" sep=" " />
-            </span>
-          )}
+        <div className="band">
+          <Bilingual zh="我的路线图" en="My roadmap" onInk as="h1" />
+          <div className="answer-pills">
+            {['degree', 'campus', 'funding', 'housing', 'region'].map((k) => (
+              <span key={k} className="answer-pill">
+                <L zh={ANSWER_LABELS[k][answers[k]].zh} en={ANSWER_LABELS[k][answers[k]].en} sep=" " />
+              </span>
+            ))}
+            {answers.family && (
+              <span className="answer-pill pill-accent">
+                <L zh="家属同行" en="With family" sep=" " />
+              </span>
+            )}
+          </div>
+          <p className="mono" style={{ marginTop: 12, letterSpacing: '.06em' }}>
+            <L zh="抵达" en="Arrival" /> · {formatDay(roadmap.arrival)}
+          </p>
+          <p className="print-only print-note">
+            Landed 落地清华 · sample data for a prototype — verify with official Tsinghua sources.
+          </p>
         </div>
-        <p className="mono" style={{ marginTop: 12, letterSpacing: '.06em' }}>
-          <L zh="抵达" en="Arrival" /> · {formatDay(roadmap.arrival)}
-        </p>
-      </div>
 
-      <div className="section">
-        <ThisWeek roadmap={roadmap} onToggle={actions.toggleStep} onOpen={onOpen} />
-        <KeyDates steps={roadmap.keyDates} onOpen={onOpen} />
-        {nextStep && (
-          <div className="countdown">
-            <p className="card-label">下一个截止 · Next deadline</p>
-            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-              <div>
-                <p className="cd-num">
-                  {nextStep.daysLeft < 0 ? `+${Math.abs(nextStep.daysLeft)}` : nextStep.daysLeft}
+        <div className="section rm-grid">
+          {/* On phones both columns flatten into one flow (see .rm-side / .rm-main). */}
+          <aside className="rm-side" aria-label="Summary">
+            <div className="o-1">
+              <ThisWeek roadmap={roadmap} onToggle={actions.toggleStep} onOpen={onOpen} />
+            </div>
+            <div className="o-2">
+              <KeyDates steps={roadmap.keyDates} onOpen={onOpen} />
+            </div>
+            <div className="o-3">
+              <Countdown step={roadmap.nextStep} />
+              <Costs roadmap={roadmap} />
+            </div>
+            <div className="o-9">
+              <Tools roadmap={roadmap} onEdit={onEdit} />
+            </div>
+          </aside>
+
+          <div className="rm-main">
+            {answers.degree === 'exchange' && (
+              <div className="card o-4">
+                <p className="card-label">
+                  <Alert size={13} /> <L zh="短期停留" en="Short stay" />
                 </p>
-                <p className="mono on-ink-muted" style={{ marginTop: 4 }}>
-                  {nextStep.daysLeft < 0 ? 'days over' : 'days left'}
-                </p>
+                <Bilingual zh="一学期交换的差别" en="What changes for exchange" size="sm" as="h3" />
+                <ul className="trust-list" style={{ marginTop: 8 }}>
+                  <li>
+                    <span>—</span>
+                    <span>You apply for an X2 short-stay visa instead of an X1.</span>
+                  </li>
+                  <li>
+                    <span>—</span>
+                    <span>
+                      The residence permit and bank account steps are hidden — a stay of 180 days or
+                      less does not convert to a residence permit. See “Not for you” below.
+                    </span>
+                  </li>
+                  <li>
+                    <span>—</span>
+                    <span>
+                      The physical exam is a MAYBE until you say how long you are staying. Steps that
+                      still apply carry a short-stay tip inside.
+                    </span>
+                  </li>
+                </ul>
               </div>
-              <div style={{ flex: 1 }}>
-                <p className="cd-step-zh">{nextStep.titleZh}</p>
-                <p className="cd-step-en">{nextStep.titleEn}</p>
-                <p className="mono on-ink-muted" style={{ marginTop: 8 }}>
-                  {formatDay(nextStep.deadline)}
+            )}
+
+            {cashflow && (
+              <div className="card cashflow o-4">
+                <p className="card-label">
+                  <Calendar size={13} /> <L zh="现金流" en="Week-by-week spending" />
                 </p>
+                <Bilingual zh="自费现金流规划" en="Self-funded cash flow" size="sm" as="h3" />
+                <p className="muted" style={{ fontSize: 13, margin: '8px 0 12px' }}>
+                  What leaves your pocket each week after you land, including everyday costs. The
+                  first stipend or transfer often arrives after week four.
+                </p>
+                {cashflow.map((w) => (
+                  <div className="week-row" key={w.id}>
+                    <span className="week-label">
+                      <span className="lz">{w.zh}</span>
+                      <span className="le">{w.en}</span>
+                    </span>
+                    <span className="bar-track">
+                      <span className="bar-fill" style={{ width: `${Math.max(6, w.share * 100)}%` }} />
+                    </span>
+                    <span className="week-amt">{formatRange([w.low, w.high])}</span>
+                  </div>
+                ))}
               </div>
+            )}
+
+            <div className="o-5">
+              <div className="timeline-head">
+                <Bilingual zh="全部步骤" en="All steps" size="sm" as="h2" />
+                {roadmap.byStage.length > 0 && (
+                  <button type="button" className="text-btn" onClick={() => setAll(!allOpen)}>
+                    {allOpen ? <L zh="全部收起" en="Collapse all" /> : <L zh="全部展开" en="Expand all" />}
+                  </button>
+                )}
+              </div>
+              {roadmap.byStage.length === 0 && (
+                <div className="empty-state" style={{ marginTop: 12 }}>
+                  <p className="empty-zh">路线图是空的</p>
+                  <p className="empty-en">
+                    Every step is hidden. Restore some below, or add your own.
+                  </p>
+                </div>
+              )}
+              {roadmap.byStage.map((stage) => (
+                <StageBlock
+                  key={stage.id}
+                  stage={stage}
+                  open={openStages.has(stage.id)}
+                  onToggleOpen={toggleStage}
+                  lateArrival={lateArrival}
+                  actions={actions}
+                  onOpen={onOpen}
+                />
+              ))}
+
+              {adding ? (
+                <AddStepForm
+                  defaultDate={toISODay(roadmap.arrival)}
+                  onAdd={actions.addCustom}
+                  onClose={() => setAdding(false)}
+                />
+              ) : (
+                <button type="button" className="add-step" onClick={() => setAdding(true)}>
+                  <Plus size={20} />
+                  <L zh="添加我的步骤" en="Add your own step" />
+                </button>
+              )}
+
+              <FoldList
+                id="hidden-list"
+                icon={<EyeOff size={18} />}
+                zh="已隐藏的步骤"
+                en="Hidden steps"
+                steps={roadmap.hiddenSteps}
+                onOpen={onOpen}
+                renderAction={(s) => (
+                  <button
+                    type="button"
+                    className="btn secondary small"
+                    onClick={() => actions.restoreStep(s.id)}
+                  >
+                    <L zh="恢复" en="Restore" />
+                  </button>
+                )}
+              />
+              <FoldList
+                id="skipped-list"
+                icon={<Close size={18} />}
+                zh="不适用于你"
+                en="Not for you"
+                steps={roadmap.skippedSteps}
+                onOpen={onOpen}
+                renderNote={(s) => (
+                  <>
+                    <span className="lz">{s.verdict.reason.zh}</span>
+                    <span className="le">{s.verdict.reason.en}</span>
+                  </>
+                )}
+              />
+            </div>
+
+            <div className="o-6">
+              <DocChecklist
+                steps={roadmap.steps}
+                docs={docs}
+                onToggle={actions.toggleDoc}
+                onOpen={onOpen}
+              />
+              <button type="button" className="tool-link" onClick={onCheck}>
+                <FileSearch size={22} />
+                <span className="tool-text">
+                  <span className="tool-zh">检查一份文件</span>
+                  <span className="tool-en">Check a document for dates, fees and risky terms</span>
+                </span>
+                <ChevronRight size={18} />
+              </button>
             </div>
           </div>
-        )}
-
-        <div className="summary-grid">
-          <div className="stat">
-            <p className="card-label">
-              <Coins size={13} /> 行前 · Before you fly
-            </p>
-            <p className="stat-num">{formatRange(roadmap.preArrivalCost)}</p>
-            <p className="stat-sub">CNY · sample</p>
-          </div>
-          <div className="stat">
-            <p className="card-label">
-              <Coins size={13} /> 落地30天 · First 30 days
-            </p>
-            <p className="stat-num">{formatRange(roadmap.firstThirtyCost)}</p>
-            <p className="stat-sub">CNY · sample</p>
-          </div>
         </div>
-        {roadmap.laterCost[1] > 0 && (
-          <p className="later-cost">
-            <L zh="30天之后" en="After day 30" /> · {formatRange(roadmap.laterCost)}
-          </p>
-        )}
-
-        <div className="stat" style={{ marginBottom: 14 }}>
-          <p className="card-label">
-            <Check size={13} /> 进度 · Progress
-          </p>
-          <p className="stat-num">
-            {roadmap.doneCount}
-            <span style={{ fontSize: 20, color: 'var(--muted)' }}> / {roadmap.totalCount}</span>
-          </p>
-          <div className="progress-track on-paper" style={{ marginTop: 10 }}>
-            <div
-              className="progress-fill"
-              style={{ width: `${(roadmap.doneCount / roadmap.totalCount) * 100}%` }}
-            />
-          </div>
-          <p className="stat-sub">
-            {roadmap.overdueCount > 0
-              ? `${roadmap.overdueCount} overdue · saved on this device`
-              : 'Saved on this device'}
-          </p>
-        </div>
-
-        {cashflow && (
-          <div className="card cashflow">
-            <p className="card-label">
-              <Calendar size={13} /> 现金流 · Week-by-week spending
-            </p>
-            <Bilingual zh="自费现金流规划" en="Self-funded cash flow" size="sm" as="h3" />
-            <p className="muted" style={{ fontSize: 13, margin: '8px 0 12px' }}>
-              What leaves your pocket each week after you land, including everyday costs. The first
-              stipend or transfer often arrives after week four.
-            </p>
-            {cashflow.map((w) => (
-              <div className="week-row" key={w.id}>
-                <span className="week-label">
-                  {w.zh}
-                  <br />
-                  {w.en}
-                </span>
-                <span className="bar-track">
-                  <span className="bar-fill" style={{ width: `${Math.max(6, w.share * 100)}%` }} />
-                </span>
-                <span className="week-amt">{formatRange([w.low, w.high])}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {answers.degree === 'exchange' && (
-          <div className="card">
-            <p className="card-label">
-              <Alert size={13} /> 短期停留 · Short stay
-            </p>
-            <Bilingual zh="一学期交换的差别" en="What changes for exchange" size="sm" as="h3" />
-            <ul className="trust-list" style={{ marginTop: 8 }}>
-              <li>
-                <span>—</span>
-                <span>You apply for an X2 short-stay visa instead of an X1.</span>
-              </li>
-              <li>
-                <span>—</span>
-                <span>
-                  The residence permit and bank account steps are hidden — a stay of 180 days or less
-                  does not convert to a residence permit.
-                </span>
-              </li>
-              <li>
-                <span>—</span>
-                <span>Steps that still apply carry a short-stay tip inside.</span>
-              </li>
-            </ul>
-          </div>
-        )}
-
-        <button type="button" className="tool-link" onClick={onCheck}>
-          <FileSearch size={22} />
-          <span className="tool-text">
-            <span className="tool-zh">检查一份文件</span>
-            <span className="tool-en">Check a document for dates, fees and risky terms</span>
-          </span>
-          <ChevronRight size={18} />
-        </button>
-
-        <div className="timeline-head">
-          <Bilingual zh="全部步骤" en="All steps" size="sm" />
-          <button type="button" className="text-btn" onClick={() => setAll(!allOpen)}>
-            {allOpen ? <L zh="全部收起" en="Collapse all" /> : <L zh="全部展开" en="Expand all" />}
-          </button>
-        </div>
-        {roadmap.byStage.map((stage) => (
-          <StageBlock
-            key={stage.id}
-            stage={stage}
-            open={openStages.has(stage.id)}
-            onToggleOpen={toggleStage}
-            lateArrival={lateArrival}
-            actions={actions}
-            onOpen={onOpen}
-          />
-        ))}
-
-        {adding ? (
-          <AddStepForm
-            defaultDate={toISODay(roadmap.arrival)}
-            onAdd={actions.addCustom}
-            onClose={() => setAdding(false)}
-          />
-        ) : (
-          <button type="button" className="add-step" onClick={() => setAdding(true)}>
-            <Plus size={20} />
-            <L zh="添加我的步骤" en="Add your own step" />
-          </button>
-        )}
-
-        <FoldList
-          id="hidden-list"
-          icon={<EyeOff size={18} />}
-          zh="已隐藏的步骤"
-          en="Hidden steps"
-          steps={roadmap.hiddenSteps}
-          onOpen={onOpen}
-          renderAction={(s) => (
-            <button
-              type="button"
-              className="btn secondary small"
-              onClick={() => actions.restoreStep(s.id)}
-            >
-              <L zh="恢复" en="Restore" />
-            </button>
-          )}
-        />
-        <FoldList
-          id="skipped-list"
-          icon={<Close size={18} />}
-          zh="不适用于你"
-          en="Not for you"
-          steps={roadmap.skippedSteps}
-          onOpen={onOpen}
-          renderNote={(s) => (
-            <>
-              <span className="lz">{s.verdict.reason.zh}</span>
-              <span className="le">{s.verdict.reason.en}</span>
-            </>
-          )}
-        />
-      </div>
-
-      <div className="detail-dock">
-        <button type="button" className="btn secondary" onClick={onEdit}>
-          <Refresh size={20} />
-          <span>
-            <span className="btn-zh" style={{ display: 'block' }}>
-              修改答案
-            </span>
-            Edit answers
-          </span>
-        </button>
-      </div>
+      </main>
     </div>
   )
 }

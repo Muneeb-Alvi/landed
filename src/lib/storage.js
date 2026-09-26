@@ -86,11 +86,16 @@ export function load(name) {
 
 export const save = (name, value) => write(KEYS[name], value)
 
+/** A fresh copy of a key's empty value, for resetting state. */
+export const defaultFor = (name) => structuredClone(DEFAULTS[name])
+
 /** useState that persists to one of the KEYS above. */
 export function useStored(name) {
   const [value, setValue] = useState(() => load(name))
   useEffect(() => {
-    if (value === null) remove(KEYS[name])
+    // Empty values are not written, so a fresh visit or "start over" leaves
+    // nothing behind in storage.
+    if (value === null || JSON.stringify(value) === JSON.stringify(DEFAULTS[name])) remove(KEYS[name])
     else save(name, value)
   }, [name, value])
   return [value, setValue]

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTitle } from '../components/AppContext.js'
 import { AppBar, Bilingual, Chip, L, LevelChip, SampleBanner } from '../components/Chrome.jsx'
 import {
   Alert,
@@ -474,7 +475,9 @@ function PlanBlock({ step, isHidden, actions, onHide, onDelete }) {
 /** Private notes. Saved as you type, never shared. */
 function MyNotes({ stepId, value, onChange }) {
   const [text, setText] = useState(value)
-  useEffect(() => setText(value), [stepId, value])
+  useEffect(() => {
+    setText(value)
+  }, [stepId, value])
   return (
     <section className="card">
       <label className="field" style={{ marginBottom: 0 }}>
@@ -517,216 +520,234 @@ export default function StepDetail({
   total,
 }) {
   const stage = STAGE_BY_ID[step.stage]
+  useTitle(step.titleEn)
 
   return (
     <div className="shell">
       <SampleBanner />
       <AppBar onBack={onBack} backLabel="Back to roadmap" />
+      <main id="main" tabIndex={-1}>
 
-      <div className="detail-hero">
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-          <Chip>{stage.num}</Chip>
-          <span className="mono on-ink-muted">
-            <L zh={stage.zh} en={stage.en} />
-          </span>
-          <span className="spacer" style={{ flex: 1 }} />
-          {index > 0 && (
+        <div className="detail-hero">
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Chip>{stage.num}</Chip>
             <span className="mono on-ink-muted">
-              Step {String(index).padStart(2, '0')}/{String(total).padStart(2, '0')}
+              <L zh={stage.zh} en={stage.en} />
             </span>
+            <span className="spacer" style={{ flex: 1 }} />
+            {index > 0 && (
+              <span className="mono on-ink-muted">
+                Step {String(index).padStart(2, '0')}/{String(total).padStart(2, '0')}
+              </span>
+            )}
+          </div>
+
+          {step.custom ? (
+            <>
+              <h1 className="d-custom">{step.titleEn}</h1>
+              <p className="mono on-ink-muted" style={{ marginTop: 6 }}>
+                <L zh="自定义步骤" en="Your own step" />
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="d-zh">{step.titleZh}</h1>
+              <p className="d-en">{step.titleEn}</p>
+            </>
           )}
-        </div>
 
-        {step.custom ? (
-          <>
-            <h1 className="d-en d-custom">{step.titleEn}</h1>
-            <p className="mono on-ink-muted" style={{ marginTop: 6 }}>
-              <L zh="自定义步骤" en="Your own step" />
-            </p>
-          </>
-        ) : (
-          <>
-            <h1 className="d-zh">{step.titleZh}</h1>
-            <p className="d-en">{step.titleEn}</p>
-          </>
-        )}
-
-        <div className="factgrid">
-          <div className="fact">
-            <p className="f-label">
-              <L zh="截止" en="Deadline" />
-            </p>
-            <p className="f-value">{formatDay(step.deadline)}</p>
-          </div>
-          <div className="fact">
-            <p className="f-label">
-              <L zh="状态" en="Status" />
-            </p>
-            <p className="f-value">
-              {isSkipped
-                ? '不适用 Not for you'
-                : isHidden
-                ? '已隐藏 Hidden'
-                : step.done
-                  ? '已完成 Done'
-                  : step.daysLeft < 0
-                    ? `逾期 Overdue ${Math.abs(step.daysLeft)}d`
-                    : `剩 ${step.daysLeft}d left`}
-            </p>
-          </div>
-          {!step.custom && (
+          <div className="factgrid">
             <div className="fact">
               <p className="f-label">
-                <Clock size={11} /> <L zh="实际耗时" en="Real wait" />
+                <L zh="截止" en="Deadline" />
               </p>
-              <p className="f-value" style={{ fontSize: 12.5, lineHeight: 1.45 }}>
-                {step.realWait}
+              <p className="f-value">{formatDay(step.deadline)}</p>
+            </div>
+            <div className="fact">
+              <p className="f-label">
+                <L zh="状态" en="Status" />
+              </p>
+              <p className="f-value">
+                {isSkipped
+                  ? '不适用 Not for you'
+                  : isHidden
+                  ? '已隐藏 Hidden'
+                  : step.done
+                    ? '已完成 Done'
+                    : step.daysLeft < 0
+                      ? `逾期 Overdue ${Math.abs(step.daysLeft)}d`
+                      : `剩 ${step.daysLeft}d left`}
               </p>
             </div>
-          )}
-          <div className="fact">
-            <p className="f-label">
-              <Coins size={11} /> <L zh="费用" en="Cost" />
-            </p>
-            <p className="f-value">
-              {step.costCNY[1] === 0 ? '免费 Free' : formatRange(step.costCNY)}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="section detail-body">
-        <VerdictBlock
-          step={step}
-          answers={answers}
-          followUps={followUps}
-          onAnswer={actions.answerFollowUp}
-        />
-        {isHidden && (
-          <div className="card accent" role="note">
-            <p className="card-label">
-              <EyeOff size={13} /> <L zh="已隐藏" en="Hidden from your roadmap" />
-            </p>
-            <p style={{ fontSize: 14 }}>
-              This step is left out of your timeline, totals and progress. Restore it any time.
-            </p>
-          </div>
-        )}
-
-        {step.deferred && (
-          <div className="card accent">
-            <p className="card-label">
-              <Alert size={13} /> <L zh="已推迟" en="Moved to week two" />
-            </p>
-            <p style={{ fontSize: 14 }}>
-              Your arrival is close, so this non-urgent step was pushed to week two to keep your
-              first days clear.
-            </p>
-          </div>
-        )}
-
-        {step.redFlags?.length > 0 && (
-          <section className="card red-flags" aria-labelledby="rf-title">
-            <h2 className="card-label" id="rf-title">
-              <Alert size={13} /> <L zh="风险提示" en="Red flags" /> · sample
-            </h2>
-            <ul>
-              {sortFlags(step.redFlags).map((f) => (
-                <li key={f.en} className="rf-row">
-                  <LevelChip level={f.level} />
-                  <span className="rf-text">
-                    <span className="lz rf-zh">{f.zh}</span>
-                    <span className="le">{f.en}</span>
-                  </span>
-                </li>
-              ))}
-            </ul>
-            <p className="field-hint">Drawn from the student notes below — check the official rules.</p>
-          </section>
-        )}
-
-        {!step.custom && (
-          <>
-            <div className="section-head" style={{ marginBottom: 12 }}>
-              <Chip ghost>01</Chip>
-              <Bilingual zh="官方要求" en="Official requirement" size="sm" />
-            </div>
-            <div className="card">
-              <p style={{ fontSize: 14.5, lineHeight: 1.65 }}>{step.officialRequirement}</p>
-              <a
-                className="official-link"
-                href={step.officialSourceUrl}
-                target="_blank"
-                rel="noreferrer noopener"
-              >
-                <External size={16} />
-                <span>Official source</span>
-                <span className="placeholder-tag">Placeholder link</span>
-              </a>
-            </div>
-
-            {step.shortStay && step.shortStayTip && (
-              <div className="card">
-                <p className="card-label">
-                  <Alert size={13} /> <L zh="短期停留提示" en="Short-stay tip" />
+            {!step.custom && (
+              <div className="fact">
+                <p className="f-label">
+                  <Clock size={11} /> <L zh="实际耗时" en="Real wait" />
                 </p>
-                <p style={{ fontSize: 14.5, lineHeight: 1.6 }}>{step.shortStayTip}</p>
+                <p className="f-value" style={{ fontSize: 12.5, lineHeight: 1.45 }}>
+                  {step.realWait}
+                </p>
               </div>
             )}
-          </>
-        )}
+            <div className="fact">
+              <p className="f-label">
+                <Coins size={11} /> <L zh="费用" en="Cost" />
+              </p>
+              <p className="f-value">
+                {step.costCNY[1] === 0 ? '免费 Free' : formatRange(step.costCNY)}
+              </p>
+            </div>
+          </div>
+        </div>
 
-        {!isSkipped && (
-          <PlanBlock
-            step={step}
-            isHidden={isHidden}
-            actions={actions}
-            onHide={onHide}
-            onDelete={onDelete}
-          />
-        )}
-        <MyNotes stepId={step.id} value={myNote} onChange={actions.setMyNote} />
-
-        {!step.custom && (
-          <>
-            <div className="divider" />
-            <StudentIntel
-              step={step}
-              answers={answers}
-              getNotes={getNotes}
-              upvotes={upvotes}
-              flags={flags}
-              actions={actions}
-            />
-          </>
-        )}
-      </div>
-
-      <div className="detail-dock">
-        <button type="button" className="btn secondary back" onClick={onBack} aria-label="Back">
-          <ArrowLeft size={20} />
-        </button>
-        {!isHidden && !isSkipped && (
-          <button type="button" className="btn" onClick={() => actions.toggleStep(step.id)}>
-            {step.done ? (
-              <span>
-                <span className="btn-zh" style={{ display: 'block' }}>
-                  标记为未完成
-                </span>
-                <span className="le">Mark not done</span>
-              </span>
-            ) : (
-              <span>
-                <span className="btn-zh" style={{ display: 'block' }}>
-                  标记为已完成
-                </span>
-                <span className="le">Mark as done</span>
-              </span>
+        {/* Phones: one column in reading order (the o-* classes). Desktop: content
+            left, verdict and your plan in a sticky column on the right. */}
+        <div className="section detail-body">
+          <div className="detail-side">
+            {(isHidden || step.deferred) && (
+              <div className="o-0">
+                {isHidden && (
+                  <div className="card accent" role="note">
+                    <p className="card-label">
+                      <EyeOff size={13} /> <L zh="已隐藏" en="Hidden from your roadmap" />
+                    </p>
+                    <p style={{ fontSize: 14 }}>
+                      This step is left out of your timeline, totals and progress. Restore it any
+                      time.
+                    </p>
+                  </div>
+                )}
+                {step.deferred && (
+                  <div className="card accent">
+                    <p className="card-label">
+                      <Alert size={13} /> <L zh="已推迟" en="Moved to week two" />
+                    </p>
+                    <p style={{ fontSize: 14 }}>
+                      Your arrival is close, so this non-urgent step was pushed to week two to keep
+                      your first days clear.
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
-            {!step.done && <Check size={22} />}
+            <div className="o-1">
+              <VerdictBlock
+                step={step}
+                answers={answers}
+                followUps={followUps}
+                onAnswer={actions.answerFollowUp}
+              />
+            </div>
+            <div className="o-5">
+              {!isSkipped && (
+                <PlanBlock
+                  step={step}
+                  isHidden={isHidden}
+                  actions={actions}
+                  onHide={onHide}
+                  onDelete={onDelete}
+                />
+              )}
+              <MyNotes stepId={step.id} value={myNote} onChange={actions.setMyNote} />
+            </div>
+          </div>
+
+          <div className="detail-main">
+            {step.redFlags?.length > 0 && (
+              <section className="card red-flags o-2" aria-labelledby="rf-title">
+                <h2 className="card-label" id="rf-title">
+                  <Alert size={13} /> <L zh="风险提示" en="Red flags" /> · sample
+                </h2>
+                <ul>
+                  {sortFlags(step.redFlags).map((f) => (
+                    <li key={f.en} className="rf-row">
+                      <LevelChip level={f.level} />
+                      <span className="rf-text">
+                        <span className="lz rf-zh">{f.zh}</span>
+                        <span className="le">{f.en}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="field-hint">
+                  Drawn from the student notes below — check the official rules.
+                </p>
+              </section>
+            )}
+
+            {!step.custom && (
+              <section className="o-3" aria-labelledby="official-title">
+                <div className="section-head" style={{ marginBottom: 12 }}>
+                  <Chip ghost>01</Chip>
+                  <Bilingual zh="官方要求" en="Official requirement" size="sm" id="official-title" />
+                </div>
+                <div className="card">
+                  <p style={{ fontSize: 14.5, lineHeight: 1.65 }}>{step.officialRequirement}</p>
+                  <a
+                    className="official-link"
+                    href={step.officialSourceUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    <External size={16} />
+                    <span>Official source</span>
+                    <span className="placeholder-tag">Placeholder link</span>
+                  </a>
+                </div>
+
+                {step.shortStay && step.shortStayTip && (
+                  <div className="card">
+                    <p className="card-label">
+                      <Alert size={13} /> <L zh="短期停留提示" en="Short-stay tip" />
+                    </p>
+                    <p style={{ fontSize: 14.5, lineHeight: 1.6 }}>{step.shortStayTip}</p>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {!step.custom && (
+              <div className="o-7">
+                <div className="divider" />
+                <StudentIntel
+                  step={step}
+                  answers={answers}
+                  getNotes={getNotes}
+                  upvotes={upvotes}
+                  flags={flags}
+                  actions={actions}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="detail-dock">
+          <button type="button" className="btn secondary back" onClick={onBack} aria-label="Back">
+            <ArrowLeft size={20} />
           </button>
-        )}
-      </div>
+          {!isHidden && !isSkipped && (
+            <button type="button" className="btn" onClick={() => actions.toggleStep(step.id)}>
+              {step.done ? (
+                <span>
+                  <span className="btn-zh" style={{ display: 'block' }}>
+                    标记为未完成
+                  </span>
+                  <span className="le">Mark not done</span>
+                </span>
+              ) : (
+                <span>
+                  <span className="btn-zh" style={{ display: 'block' }}>
+                    标记为已完成
+                  </span>
+                  <span className="le">Mark as done</span>
+                </span>
+              )}
+              {!step.done && <Check size={22} />}
+            </button>
+          )}
+        </div>
+      </main>
     </div>
   )
 }
