@@ -31,7 +31,7 @@ export default function App() {
   useEffect(() => saveFlags(flags), [flags])
 
   const roadmap = useMemo(
-    () => (answers?.arrivalDate ? buildRoadmap(answers, checked) : null),
+    () => (answers?.arrivalDate ? buildRoadmap(answers, { checked }) : null),
     [answers, checked]
   )
 

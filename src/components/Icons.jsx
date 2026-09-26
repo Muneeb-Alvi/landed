@@ -124,3 +124,9 @@ export const Refresh = (p) => (
     <path d="M20 4v4.5h-4.5" />
   </Svg>
 )
+
+export const ChevronDown = (p) => (
+  <Svg {...p}>
+    <path d="M5 9l7 7 7-7" />
+  </Svg>
+)

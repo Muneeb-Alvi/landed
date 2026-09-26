@@ -3,8 +3,13 @@ import { STAGES } from '../data/stages.js'
 import { addDays, daysBetween, parseDay, today as todayFn } from './date.js'
 
 // Arrival is "imminent" below this many days, which switches the roadmap into
-// triage mode: a do-these-first banner and deferrable steps pushed to week two.
+// triage mode: the this-week card turns urgent and deferrable steps are pushed
+// to week two.
 export const LATE_ARRIVAL_DAYS = 14
+
+// How many steps the "this week" card holds. A short list gets done; a long
+// one gets scrolled past.
+export const THIS_WEEK_COUNT = 3
 
 // SAMPLE: everyday spending (food, transport, small household) used by the
 // cash-flow card so the weeks reflect real outgoings, not just step fees.
@@ -53,10 +58,41 @@ export function stepNotes(step, answers, upvotes) {
 }
 
 /**
+ * The most pressing unfinished steps: those whose deadlines sit closest to
+ * today, in either direction. Ordering by raw deadline would surface steps that
+ * are months overdue and useless ("accept your offer") over the ones that are
+ * actually about to bite. Returned soonest-deadline first.
+ */
+export function pickThisWeek(steps, count = THIS_WEEK_COUNT) {
+  return steps
+    .filter((s) => !s.done)
+    .sort((a, b) => {
+      const d = Math.abs(a.daysLeft) - Math.abs(b.daysLeft)
+      if (d !== 0) return d
+      return b.daysLeft - a.daysLeft // on a tie, the upcoming one first
+    })
+    .slice(0, count)
+    .sort((a, b) => a.daysLeft - b.daysLeft)
+}
+
+/** Short, mono-friendly label for how far away a deadline is. */
+export function daysLabel(daysLeft) {
+  if (daysLeft === 0) return { text: 'TODAY', zh: '今天', tone: 'urgent' }
+  if (daysLeft < 0) {
+    return { text: `OVERDUE ${Math.abs(daysLeft)}D`, zh: `逾期${Math.abs(daysLeft)}天`, tone: 'past' }
+  }
+  return { text: `D-${daysLeft}`, zh: `剩${daysLeft}天`, tone: daysLeft <= 14 ? 'urgent' : '' }
+}
+
+/**
  * Build the personalised roadmap.
  * Deadlines are arrivalDate + offsetDays; negative offsets fall before arrival.
+ *
+ * `user` carries everything the student has done to the roadmap on this
+ * device: { checked }.
  */
-export function buildRoadmap(answers, checked = {}, now = todayFn()) {
+export function buildRoadmap(answers, user = {}, now = todayFn()) {
+  const checked = user.checked || {}
   const arrival = parseDay(answers?.arrivalDate)
   if (!arrival) return null
 
@@ -76,25 +112,12 @@ export function buildRoadmap(answers, checked = {}, now = todayFn()) {
     }
   })
 
-  // Triage: the three unfinished steps whose deadlines sit closest to today,
-  // in either direction. Ordering by raw offset would surface steps that are
-  // months overdue and useless ("accept your offer") over the ones that are
-  // actually about to bite.
-  let doFirst = []
+  // Triage: when arrival is close, anything deferrable that is not in this
+  // week's three is pushed to the start of week two.
   if (lateArrival) {
-    doFirst = steps
-      .filter((s) => !s.done)
-      .sort((a, b) => {
-        const d = Math.abs(a.daysLeft) - Math.abs(b.daysLeft)
-        if (d !== 0) return d
-        return b.daysLeft - a.daysLeft // on a tie, the upcoming one first
-      })
-      .slice(0, 3)
-      .sort((a, b) => a.daysLeft - b.daysLeft)
-    const doFirstIds = new Set(doFirst.map((s) => s.id))
-
+    const firstIds = new Set(pickThisWeek(steps).map((s) => s.id))
     steps = steps.map((s) => {
-      if (!s.deferrable || s.done || doFirstIds.has(s.id) || s.offsetDays >= 7) return s
+      if (!s.deferrable || s.done || firstIds.has(s.id) || s.offsetDays >= 7) return s
       const offset = 7 // start of week two
       const deadline = addDays(arrival, offset)
       return {
@@ -146,7 +169,7 @@ export function buildRoadmap(answers, checked = {}, now = todayFn()) {
     lateArrival,
     steps,
     byStage,
-    doFirst,
+    thisWeek: pickThisWeek(steps),
     nextStep,
     doneCount,
     overdueCount: overdue.length,

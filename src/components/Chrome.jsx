@@ -10,6 +10,20 @@ export function Bilingual({ zh, en, size, onInk, as: Tag = 'h2' }) {
   )
 }
 
+/**
+ * Inline bilingual label: "中文 · English". Each half carries a class so the
+ * language toggle can hide one side without touching the markup.
+ */
+export function L({ zh, en, sep = ' · ' }) {
+  return (
+    <>
+      <span className="lz">{zh}</span>
+      <span className="lsep">{sep}</span>
+      <span className="le">{en}</span>
+    </>
+  )
+}
+
 export function Chip({ children, ghost }) {
   return <span className={`chip${ghost ? ' ghost' : ''}`}>{children}</span>
 }

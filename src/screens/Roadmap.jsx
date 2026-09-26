@@ -1,60 +1,81 @@
-import { AppBar, Bilingual, Chip, SampleBanner } from '../components/Chrome.jsx'
+import { useState } from 'react'
+import { AppBar, Bilingual, Chip, L, SampleBanner } from '../components/Chrome.jsx'
 import {
   Alert,
   Calendar,
   Check,
+  ChevronDown,
   ChevronRight,
   Clock,
   Coins,
   Refresh,
 } from '../components/Icons.jsx'
+import { ANSWER_LABELS } from '../data/labels.js'
 import { formatDay } from '../lib/date.js'
-import { formatRange, LATE_ARRIVAL_DAYS } from '../lib/roadmap.js'
+import { daysLabel, formatRange, LATE_ARRIVAL_DAYS } from '../lib/roadmap.js'
 
-const ANSWER_LABELS = {
-  region: {
-    'east-asia': '东亚 East Asia',
-    'southeast-asia': '东南亚 SE Asia',
-    'south-asia': '南亚 South Asia',
-    africa: '非洲 Africa',
-    europe: '欧洲 Europe',
-    americas: '美洲 Americas',
-    oceania: '大洋洲 Oceania',
-  },
-  degree: {
-    bachelor: '本科 Bachelor',
-    master: '硕士 Master',
-    phd: '博士 PhD',
-    exchange: '交换 Exchange',
-  },
-  campus: { beijing: '北京 Beijing', sigs: '深圳 SIGS' },
-  funding: { scholarship: '奖学金 Scholarship', self: '自费 Self-funded' },
-  housing: { dorm: '宿舍 Dorm', offcampus: '校外 Off-campus' },
+function CheckBox({ step, onToggle, label }) {
+  return (
+    <button
+      type="button"
+      className="step-check"
+      role="checkbox"
+      aria-checked={step.done}
+      aria-label={label || `Mark "${step.titleEn}" as done`}
+      onClick={() => onToggle(step.id)}
+    >
+      <span className={`box${step.done ? ' checked' : ''}`}>
+        {step.done && <Check size={16} color="var(--accent)" className="tick" />}
+      </span>
+    </button>
+  )
 }
 
-function daysBadge(daysLeft) {
-  if (daysLeft === 0) return { text: 'TODAY', tone: 'urgent' }
-  if (daysLeft < 0) return { text: `OVERDUE ${Math.abs(daysLeft)}D`, tone: 'past' }
-  if (daysLeft <= 14) return { text: `D-${daysLeft}`, tone: 'urgent' }
-  return { text: `D-${daysLeft}`, tone: '' }
+/** 本周三件事 — always at the top; turns urgent when arrival is close. */
+function ThisWeek({ roadmap, onToggle, onOpen }) {
+  const { thisWeek, lateArrival, daysUntilArrival } = roadmap
+  return (
+    <section className={`this-week${lateArrival ? ' late' : ''}`} aria-labelledby="tw-title">
+      <h2 id="tw-title" className="tw-title">
+        <span className="tw-zh">{lateArrival ? '优先处理这三件' : '本周三件事'}</span>
+        <span className="tw-en">{lateArrival ? 'Do these 3 first' : 'This week: 3 things'}</span>
+      </h2>
+      {lateArrival && (
+        <p className="tw-sub">
+          Arrival is in {daysUntilArrival} {daysUntilArrival === 1 ? 'day' : 'days'} — under{' '}
+          {LATE_ARRIVAL_DAYS}. Non-urgent steps have been pushed to week two.
+        </p>
+      )}
+      {thisWeek.length === 0 ? (
+        <p className="tw-empty">
+          <L zh="全部完成" en="Nothing left to do — every step is ticked off." />
+        </p>
+      ) : (
+        <ol className="tw-list">
+          {thisWeek.map((s) => {
+            const d = daysLabel(s.daysLeft)
+            return (
+              <li key={s.id} className={s.done ? 'done' : ''}>
+                <CheckBox step={s} onToggle={onToggle} />
+                <button type="button" className="tw-open" onClick={() => onOpen(s.id)}>
+                  <span className="tw-step-zh">{s.titleZh}</span>
+                  <span className="tw-step-en">{s.titleEn}</span>
+                </button>
+                <span className={`tw-days ${d.tone}`}>{d.text}</span>
+              </li>
+            )
+          })}
+        </ol>
+      )}
+    </section>
+  )
 }
 
 function StepRow({ step, onToggle, onOpen }) {
-  const badge = daysBadge(step.daysLeft)
+  const badge = daysLabel(step.daysLeft)
   return (
     <li className={`step-row${step.done ? ' done' : ''}`}>
-      <button
-        type="button"
-        className="step-check"
-        role="checkbox"
-        aria-checked={step.done}
-        aria-label={`Mark "${step.titleEn}" as done`}
-        onClick={() => onToggle(step.id)}
-      >
-        <span className={`box${step.done ? ' checked' : ''}`}>
-          {step.done && <Check size={16} color="var(--accent)" />}
-        </span>
-      </button>
+      <CheckBox step={step} onToggle={onToggle} />
 
       <button type="button" className="step-open" onClick={() => onOpen(step.id)}>
         <span style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
@@ -79,8 +100,71 @@ function StepRow({ step, onToggle, onOpen }) {
   )
 }
 
+/** Stages holding this week's steps start open; everything else starts folded. */
+function initialOpenStages(roadmap) {
+  const open = new Set(roadmap.thisWeek.map((s) => s.stage))
+  if (open.size === 0) {
+    const firstUnfinished = roadmap.byStage.find((st) => st.steps.some((s) => !s.done))
+    if (firstUnfinished) open.add(firstUnfinished.id)
+  }
+  return open
+}
+
+function StageBlock({ stage, open, onToggleOpen, lateArrival, onToggle, onOpen }) {
+  const done = stage.steps.filter((s) => s.done).length
+  const listId = `stage-list-${stage.id}`
+  return (
+    <section className="stage-block">
+      <h3 className="stage-h">
+        <button
+          type="button"
+          className="stage-head"
+          aria-expanded={open}
+          aria-controls={listId}
+          onClick={() => onToggleOpen(stage.id)}
+        >
+          <Chip>{stage.num}</Chip>
+          <span className="s-text">
+            <span className="s-zh">{stage.zh}</span>
+            <span className="s-en">{stage.en}</span>
+          </span>
+          <span className="s-count">
+            {done}/{stage.steps.length}
+          </span>
+          <ChevronDown size={18} className={`s-chev${open ? ' open' : ''}`} />
+        </button>
+      </h3>
+      {/* Folded lists stay in the DOM (hidden) so print can expand them. */}
+      <div id={listId} className="stage-list" hidden={!open}>
+        <ul>
+          {stage.steps.map((s) => (
+            <StepRow key={s.id} step={s} onToggle={onToggle} onOpen={onOpen} />
+          ))}
+        </ul>
+        {lateArrival && stage.steps.some((s) => s.deferred) && (
+          <p className="week2-note">
+            <Clock size={12} /> Non-urgent steps in this stage moved to week two
+          </p>
+        )}
+      </div>
+    </section>
+  )
+}
+
 export default function Roadmap({ answers, roadmap, onToggle, onOpen, onEdit }) {
-  const { nextStep, lateArrival, doFirst, cashflow } = roadmap
+  const { nextStep, lateArrival, cashflow } = roadmap
+  const [openStages, setOpenStages] = useState(() => initialOpenStages(roadmap))
+  const allOpen = roadmap.byStage.every((st) => openStages.has(st.id))
+
+  const toggleStage = (id) =>
+    setOpenStages((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  const setAll = (open) =>
+    setOpenStages(open ? new Set(roadmap.byStage.map((st) => st.id)) : new Set())
 
   return (
     <div className="shell">
@@ -89,68 +173,25 @@ export default function Roadmap({ answers, roadmap, onToggle, onOpen, onEdit }) 
 
       <div className="band">
         <Bilingual zh="我的路线图" en="My roadmap" onInk as="h1" />
-        <div
-          style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 12, alignItems: 'center' }}
-        >
+        <div className="answer-pills">
           {['degree', 'campus', 'funding', 'housing', 'region'].map((k) => (
-            <span
-              key={k}
-              className="mono"
-              style={{
-                border: '1px solid rgba(185,199,198,.4)',
-                padding: '3px 7px',
-                textTransform: 'none',
-                letterSpacing: '.04em',
-                fontSize: 11,
-              }}
-            >
-              {ANSWER_LABELS[k][answers[k]]}
+            <span key={k} className="answer-pill">
+              <L zh={ANSWER_LABELS[k][answers[k]].zh} en={ANSWER_LABELS[k][answers[k]].en} sep=" " />
             </span>
           ))}
           {answers.family && (
-            <span
-              className="mono pill-accent"
-              style={{
-                padding: '3px 7px',
-                textTransform: 'none',
-                letterSpacing: '.04em',
-                fontSize: 11,
-              }}
-            >
-              家属同行 With family
+            <span className="answer-pill pill-accent">
+              <L zh="家属同行" en="With family" sep=" " />
             </span>
           )}
         </div>
         <p className="mono" style={{ marginTop: 12, letterSpacing: '.06em' }}>
-          抵达 Arrival · {formatDay(roadmap.arrival)}
+          <L zh="抵达" en="Arrival" /> · {formatDay(roadmap.arrival)}
         </p>
       </div>
 
       <div className="section">
-        {lateArrival && (
-          <div className="urgent" role="alert">
-            <p className="u-title-zh">优先处理这三件</p>
-            <p className="u-title-en">Do these 3 first</p>
-            <p style={{ fontSize: 13.5, marginBottom: 6 }}>
-              Arrival is in {roadmap.daysUntilArrival}{' '}
-              {roadmap.daysUntilArrival === 1 ? 'day' : 'days'} — under {LATE_ARRIVAL_DAYS}. Non-urgent
-              steps have been pushed to week two.
-            </p>
-            <ol>
-              {doFirst.map((s, i) => (
-                <li key={s.id}>
-                  <span className="u-idx">{String(i + 1).padStart(2, '0')}</span>
-                  <span>
-                    <strong className="zh">{s.titleZh}</strong>
-                    <br />
-                    {s.titleEn}
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        )}
-
+        <ThisWeek roadmap={roadmap} onToggle={onToggle} onOpen={onOpen} />
         {nextStep && (
           <div className="countdown">
             <p className="card-label">下一个截止 · Next deadline</p>
@@ -264,30 +305,22 @@ export default function Roadmap({ answers, roadmap, onToggle, onOpen, onEdit }) 
           </div>
         )}
 
+        <div className="timeline-head">
+          <Bilingual zh="全部步骤" en="All steps" size="sm" />
+          <button type="button" className="text-btn" onClick={() => setAll(!allOpen)}>
+            {allOpen ? <L zh="全部收起" en="Collapse all" /> : <L zh="全部展开" en="Expand all" />}
+          </button>
+        </div>
         {roadmap.byStage.map((stage) => (
-          <section className="stage-block" key={stage.id}>
-            <div className="stage-head">
-              <Chip>{stage.num}</Chip>
-              <span>
-                <span className="s-zh">{stage.zh}</span>
-                <br />
-                <span className="s-en">{stage.en}</span>
-              </span>
-              <span className="s-count">
-                {stage.steps.filter((s) => s.done).length}/{stage.steps.length}
-              </span>
-            </div>
-            <ul>
-              {stage.steps.map((s) => (
-                <StepRow key={s.id} step={s} onToggle={onToggle} onOpen={onOpen} />
-              ))}
-            </ul>
-            {lateArrival && stage.steps.some((s) => s.deferred) && (
-              <p className="week2-note">
-                <Clock size={12} /> Non-urgent steps in this stage moved to week two
-              </p>
-            )}
-          </section>
+          <StageBlock
+            key={stage.id}
+            stage={stage}
+            open={openStages.has(stage.id)}
+            onToggleOpen={toggleStage}
+            lateArrival={lateArrival}
+            onToggle={onToggle}
+            onOpen={onOpen}
+          />
         ))}
       </div>
 
