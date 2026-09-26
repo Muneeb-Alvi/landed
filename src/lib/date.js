@@ -39,6 +39,14 @@ export function formatDay(date) {
   return `${String(date.getDate()).padStart(2, '0')} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`
 }
 
+const MONTHS_TITLE = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+// "24 Sep" — for scannable strips where the year is obvious from context.
+export function formatShort(date) {
+  if (!date) return '—'
+  return `${date.getDate()} ${MONTHS_TITLE[date.getMonth()]}`
+}
+
 export function formatNoteDate(iso) {
   const d = parseDay(iso)
   return d ? formatDay(d) : iso

@@ -20,6 +20,9 @@
  *   costCNY      — [low, high] in CNY
  *   shortStayTip — extra line shown to one-semester exchange students
  *   deferrable   — may be pushed to week two when the arrival date is imminent
+ *   hard         — a fixed deadline (legal clock or closing window); feeds KEY DATES
+ *   redFlags     — [{ level: 'high'|'med'|'low', zh, en }] SAMPLE warnings, each
+ *                  restating something already in this step's notes or requirement
  *   notes        — [{ cohort, date, text, upvotes }]
  */
 
@@ -36,6 +39,11 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/admissions-accept',
     realWait: 'Instant, but the confirmation email can take 1–2 days',
     costCNY: [0, 0],
+    hard: true,
+    redFlags: [
+      { level: 'med', zh: '确认邮件常进垃圾箱', en: 'Confirmation email often lands in spam' },
+      { level: 'low', zh: '该页面之后可能无法再打开', en: 'Save a PDF \u2014 the acceptance page may close later' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -64,6 +72,11 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/admission-documents',
     realWait: 'Courier takes 2–4 weeks; longer outside East Asia',
     costCNY: [0, 300],
+    redFlags: [
+      { level: 'high', zh: 'JW202 有错字，修改约需11天', en: 'Typos on JW202 took ~11 days to fix' },
+      { level: 'med', zh: '快递费货到付款', en: 'Courier fee charged on delivery' },
+      { level: 'med', zh: '折叠的 JW202 曾被拒收', en: 'A folded JW202 was rejected' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -100,6 +113,10 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/housing-application',
     realWait: 'Allocation result in 3–5 weeks',
     costCNY: [1200, 2600],
+    redFlags: [
+      { level: 'high', zh: '开放后约72小时内房源抢光', en: 'Rooms fill in the first ~72 hours' },
+      { level: 'med', zh: '押金与首月房租分开支付', en: 'Deposit is a separate payment from first rent' },
+    ],
     shortStayTip:
       'Short-stay rooms are a separate quota from full-degree rooms — say one semester on the form or you may be quoted a full-year rate.',
     notes: [
@@ -131,6 +148,11 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/off-campus-housing',
     realWait: 'Viewing to signed contract: 1–3 weeks once you are in the city',
     costCNY: [6000, 14000],
+    redFlags: [
+      { level: 'high', zh: '预付三个月房租加一个月中介费', en: '3 months rent up front + 1 month agency fee' },
+      { level: 'high', zh: '没有房产证无法办理住宿登记', en: 'No ownership certificate \u2192 registration refused' },
+      { level: 'med', zh: '远程看好的房源可能并不存在', en: 'Remote listings may not exist' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -168,6 +190,10 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/physical-examination',
     realWait: 'Appointment 1–2 weeks out; results 5–10 working days',
     costCNY: [700, 1900],
+    redFlags: [
+      { level: 'high', zh: '照片未盖章，表格被拒', en: 'Unstamped photo \u2192 form refused' },
+      { level: 'med', zh: '抽血需空腹，否则要重约', en: 'Blood test needs fasting or you rebook' },
+    ],
     shortStayTip:
       'A stay under six months often does not need the full form — confirm before paying for the whole panel.',
     notes: [
@@ -205,6 +231,9 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/visa-appointment',
     realWait: 'Nearest slot is typically 2–4 weeks out; longer in July and August',
     costCNY: [0, 0],
+    redFlags: [
+      { level: 'high', zh: '七月底最早预约约在26天后', en: 'Late-July slots were ~26 days out' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -234,6 +263,12 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/x1-visa',
     realWait: 'Standard processing 4–7 working days after submission',
     costCNY: [400, 1100],
+    hard: true,
+    redFlags: [
+      { level: 'high', zh: '护照拿回前别买不可退机票', en: 'No non-refundable flights before passport is back' },
+      { level: 'med', zh: '签证中心可能不收银行卡', en: 'Card payment may not be accepted' },
+      { level: 'low', zh: 'JW202 原件会被收走', en: 'Original JW202 is kept \u2014 scan it first' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -270,6 +305,11 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/x2-visa',
     realWait: 'Standard processing 4–7 working days after submission',
     costCNY: [350, 900],
+    hard: true,
+    redFlags: [
+      { level: 'high', zh: '单次入境：出境即结束停留', en: 'Single entry \u2014 leaving ends your stay' },
+      { level: 'med', zh: '停留期限需与项目结束日核对', en: 'Check stay duration against programme end' },
+    ],
     shortStayTip:
       'Check the duration of stay printed on the visa against your programme end date the day you collect it — an X2 cannot simply be extended like a residence permit.',
     notes: [
@@ -301,6 +341,10 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/dependent-visa',
     realWait: 'Notarisation and translation 1–3 weeks, then visa processing on top',
     costCNY: [900, 3200],
+    redFlags: [
+      { level: 'high', zh: '公证翻译单独就花了16天', en: 'Notarised translation alone took 16 days' },
+      { level: 'low', zh: '家属护照可能晚两天返还', en: 'Family passports may come back days later' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -331,6 +375,10 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/arrival-window',
     realWait: 'Book once the passport is back — fares rise sharply in the last three weeks',
     costCNY: [3000, 12000],
+    redFlags: [
+      { level: 'med', zh: '深夜落地宿舍前台已关', en: 'Late-night landing: dorm reception closed' },
+      { level: 'med', zh: '最后三周票价大涨', en: 'Fares rise sharply in the last three weeks' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -366,6 +414,9 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/scholarship-stipend',
     realWait: 'First stipend commonly lands 3–6 weeks after arrival',
     costCNY: [0, 0],
+    redFlags: [
+      { level: 'high', zh: '首笔奖学金可能在落地后3–6周才到', en: 'First stipend may land 3\u20136 weeks after arrival' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -395,6 +446,10 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/payments-on-arrival',
     realWait: 'A local bank card is typically usable 1–3 weeks after arrival',
     costCNY: [4000, 9000],
+    redFlags: [
+      { level: 'high', zh: '国内银行可能在境外冻结卡', en: 'Home bank may block your card abroad' },
+      { level: 'med', zh: '入住当天押金只收现金', en: 'Dorm deposit was cash only on check-in' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -430,6 +485,10 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/what-to-bring',
     realWait: 'Not applicable',
     costCNY: [300, 1500],
+    redFlags: [
+      { level: 'med', zh: '证件原件须随身携带', en: 'Originals must be in hand luggage' },
+      { level: 'low', zh: '宿舍不含床品', en: 'Bedding is not included' },
+    ],
     shortStayTip:
       'For one semester, buy bedding locally rather than paying to fly it in — you will not want to carry it home.',
     notes: [
@@ -469,6 +528,11 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/registration',
     realWait: 'Half a day; the international student desk queues are worst on day one',
     costCNY: [0, 200],
+    hard: true,
+    redFlags: [
+      { level: 'med', zh: '报到首日排队约三小时', en: 'Day-one queues ran ~3 hours' },
+      { level: 'med', zh: '未报到则其他手续都无法办理', en: 'Nothing else unlocks until you register' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -505,6 +569,12 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/accommodation-registration',
     realWait: 'About 30 minutes at the counter — the hard part is getting the landlord there',
     costCNY: [0, 0],
+    hard: true,
+    redFlags: [
+      { level: 'high', zh: '入住24小时内，严格执行', en: '24 hours is taken literally' },
+      { level: 'high', zh: '房东通常需要到场', en: 'Landlord usually has to attend' },
+      { level: 'low', zh: '登记回执请妥善保管', en: 'Keep the registration slip' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -541,6 +611,10 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/dependent-registration',
     realWait: 'Same visit as your own registration if everyone attends in person',
     costCNY: [0, 800],
+    hard: true,
+    redFlags: [
+      { level: 'high', zh: '每位家属须本人到场', en: 'Every family member must attend in person' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -569,6 +643,9 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/sim-registration',
     realWait: '30–60 minutes in store; campus pop-up stalls in registration week are fastest',
     costCNY: [100, 350],
+    redFlags: [
+      { level: 'med', zh: '开银行账户需要本地手机号', en: 'Bank needs a local number \u2014 SIM first' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -605,6 +682,9 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/mobile-payment',
     realWait: 'Verification is usually same day; occasionally 2–3 days',
     costCNY: [0, 0],
+    redFlags: [
+      { level: 'med', zh: '姓名须与护照完全一致', en: 'Name must match passport exactly' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -641,6 +721,9 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/campus-card',
     realWait: 'Same day if you have registered; 2–3 days in peak week',
     costCNY: [20, 150],
+    redFlags: [
+      { level: 'low', zh: '补办约50元并需等两天', en: 'Replacement ~CNY 50 and a two-day wait' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -670,6 +753,11 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/health-verification',
     realWait: 'Certificate issued in 3–7 working days; a re-test adds a week',
     costCNY: [400, 1300],
+    hard: true,
+    redFlags: [
+      { level: 'high', zh: '关系到30天内的居留许可', en: 'Gates the 30-day residence permit' },
+      { level: 'med', zh: '境外胸片可能不被认可', en: 'Home X-ray may be rejected \u2014 budget a re-test' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -701,6 +789,10 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/course-registration',
     realWait: 'Selection window is short — often a single week',
     costCNY: [0, 400],
+    hard: true,
+    redFlags: [
+      { level: 'med', zh: '热门课程第一小时就满', en: 'Popular courses fill in the first hour' },
+    ],
     shortStayTip:
       'Exchange students often need a signature from both the host department and the home university — start that email before you fly.',
     notes: [
@@ -733,6 +825,10 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/bank-account',
     realWait: '1–2 hours at the branch; card sometimes issued same day, sometimes 3–7 days',
     costCNY: [0, 100],
+    redFlags: [
+      { level: 'med', zh: '有的网点会拒绝，可换网点', en: 'One branch may refuse \u2014 try another' },
+      { level: 'low', zh: '网银需单独开通', en: 'Online banking is a separate activation' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',
@@ -769,6 +865,12 @@ export const STEPS = [
     officialSourceUrl: 'https://example.org/landed-placeholder/residence-permit',
     realWait: 'Passport held 7–15 working days after submission',
     costCNY: [400, 1000],
+    hard: true,
+    redFlags: [
+      { level: 'high', zh: '30天从入境日算起', en: '30 days counts from entry, not registration' },
+      { level: 'high', zh: '逾期会被罚款', en: 'Overstaying carries a fine' },
+      { level: 'med', zh: '办理期间护照被收走7–15个工作日', en: 'Passport held 7\u201315 working days' },
+    ],
     notes: [
       {
         cohort: 'Fall 2026 · Beijing',

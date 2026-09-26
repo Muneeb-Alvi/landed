@@ -163,3 +163,12 @@ export const Trash = (p) => (
     <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
   </Svg>
 )
+
+export const FileSearch = (p) => (
+  <Svg {...p}>
+    <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h5" />
+    <path d="M14 3l5 5h-5z" />
+    <circle cx="16" cy="16" r="3" />
+    <path d="M18.2 18.2L21 21" />
+  </Svg>
+)

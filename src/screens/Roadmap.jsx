@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { AppBar, Bilingual, Chip, L, SampleBanner } from '../components/Chrome.jsx'
+import { AppBar, Bilingual, Chip, FlagChips, L, SampleBanner } from '../components/Chrome.jsx'
 import {
   Alert,
   Calendar,
@@ -9,13 +9,14 @@ import {
   Clock,
   Coins,
   EyeOff,
+  FileSearch,
   Plus,
   Refresh,
 } from '../components/Icons.jsx'
 import { ANSWER_LABELS } from '../data/labels.js'
 import { STAGES } from '../data/stages.js'
-import { formatDay, toISODay } from '../lib/date.js'
-import { daysLabel, formatRange, LATE_ARRIVAL_DAYS } from '../lib/roadmap.js'
+import { formatDay, formatShort, toISODay } from '../lib/date.js'
+import { daysLabel, flagSummary, formatRange, LATE_ARRIVAL_DAYS } from '../lib/roadmap.js'
 
 function CheckBox({ step, onToggle, label }) {
   return (
@@ -74,6 +75,38 @@ function ThisWeek({ roadmap, onToggle, onOpen }) {
   )
 }
 
+/** 关键日期 — the next fixed deadlines as "Do by 24 Sep". */
+function KeyDates({ steps, onOpen }) {
+  return (
+    <section className="key-dates" aria-labelledby="kd-title">
+      <h2 className="card-label" id="kd-title">
+        <Calendar size={13} /> <L zh="关键日期" en="Key dates" />
+      </h2>
+      {steps.length === 0 ? (
+        <p className="kd-empty">
+          <L zh="暂无硬性截止" en="No fixed deadlines ahead" />
+        </p>
+      ) : (
+        <ol className="kd-list">
+          {steps.map((s) => (
+            <li key={s.id}>
+              <button type="button" className="kd-item" onClick={() => onOpen(s.id)}>
+                <span className="kd-date">
+                  <span className="kd-by">Do by</span> {formatShort(s.deadline)}
+                </span>
+                <span className="kd-title">
+                  <span className="lz">{s.titleZh}</span>
+                  <span className="le">{s.titleEn}</span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  )
+}
+
 function StepRow({ step, actions, onOpen }) {
   const badge = daysLabel(step.daysLeft)
   return (
@@ -95,6 +128,7 @@ function StepRow({ step, actions, onOpen }) {
           <span className="date-badge">{formatDay(step.deadline)}</span>
           <span className={`days-badge ${badge.tone}`}>{badge.text}</span>
           {step.costCNY[1] > 0 && <span className="date-badge">{formatRange(step.costCNY)}</span>}
+          <FlagChips summary={flagSummary(step)} />
           {step.custom && (
             <span className="tag">
               <L zh="自定义" en="Your step" />
@@ -307,7 +341,7 @@ function HiddenSteps({ steps, onRestore, onOpen }) {
   )
 }
 
-export default function Roadmap({ answers, roadmap, actions, onOpen, onEdit }) {
+export default function Roadmap({ answers, roadmap, actions, onOpen, onEdit, onCheck }) {
   const { nextStep, lateArrival, cashflow } = roadmap
   const [openStages, setOpenStages] = useState(() => initialOpenStages(roadmap))
   const [adding, setAdding] = useState(false)
@@ -349,6 +383,7 @@ export default function Roadmap({ answers, roadmap, actions, onOpen, onEdit }) {
 
       <div className="section">
         <ThisWeek roadmap={roadmap} onToggle={actions.toggleStep} onOpen={onOpen} />
+        <KeyDates steps={roadmap.keyDates} onOpen={onOpen} />
         {nextStep && (
           <div className="countdown">
             <p className="card-label">下一个截止 · Next deadline</p>
@@ -466,6 +501,15 @@ export default function Roadmap({ answers, roadmap, actions, onOpen, onEdit }) {
             </ul>
           </div>
         )}
+
+        <button type="button" className="tool-link" onClick={onCheck}>
+          <FileSearch size={22} />
+          <span className="tool-text">
+            <span className="tool-zh">检查一份文件</span>
+            <span className="tool-en">Check a document for dates, fees and risky terms</span>
+          </span>
+          <ChevronRight size={18} />
+        </button>
 
         <div className="timeline-head">
           <Bilingual zh="全部步骤" en="All steps" size="sm" />

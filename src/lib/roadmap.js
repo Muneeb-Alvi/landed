@@ -26,6 +26,9 @@ export const newCustomId = () => `custom-${Date.now().toString(36)}-${(customSeq
 // to week two.
 export const LATE_ARRIVAL_DAYS = 14
 
+// How many fixed deadlines the KEY DATES strip shows.
+export const KEY_DATES_COUNT = 3
+
 // How many steps the "this week" card holds. A short list gets done; a long
 // one gets scrolled past.
 export const THIS_WEEK_COUNT = 3
@@ -93,6 +96,28 @@ export function pickThisWeek(steps, count = THIS_WEEK_COUNT) {
     .slice(0, count)
     .sort((a, b) => a.daysLeft - b.daysLeft)
 }
+
+/** The next few hard (legal or closing-window) deadlines that have not passed. */
+export function pickKeyDates(steps, count = KEY_DATES_COUNT) {
+  return steps
+    .filter((s) => s.hard && !s.done && s.daysLeft >= 0)
+    .sort((a, b) => a.daysLeft - b.daysLeft)
+    .slice(0, count)
+}
+
+const LEVEL_RANK = { high: 0, med: 1, low: 2 }
+
+/** Red flags grouped for chips: [{ level, count }], most severe first. */
+export function flagSummary(step) {
+  const counts = {}
+  for (const f of step.redFlags || []) counts[f.level] = (counts[f.level] || 0) + 1
+  return Object.keys(counts)
+    .sort((a, b) => LEVEL_RANK[a] - LEVEL_RANK[b])
+    .map((level) => ({ level, count: counts[level] }))
+}
+
+export const sortFlags = (flags = []) =>
+  [...flags].sort((a, b) => LEVEL_RANK[a.level] - LEVEL_RANK[b.level])
 
 /** Short, mono-friendly label for how far away a deadline is. */
 export function daysLabel(daysLeft) {
@@ -206,6 +231,7 @@ export function buildRoadmap(answers, user = {}, now = todayFn()) {
     hiddenSteps,
     byStage,
     thisWeek: pickThisWeek(steps),
+    keyDates: pickKeyDates(steps),
     nextStep,
     doneCount,
     overdueCount: overdue.length,

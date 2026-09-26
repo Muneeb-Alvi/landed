@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AppBar, Bilingual, Chip, L, SampleBanner } from '../components/Chrome.jsx'
+import { AppBar, Bilingual, Chip, L, LevelChip, SampleBanner } from '../components/Chrome.jsx'
 import {
   Alert,
   ArrowLeft,
@@ -15,7 +15,7 @@ import {
 } from '../components/Icons.jsx'
 import { STAGE_BY_ID, STAGES } from '../data/stages.js'
 import { formatDay, formatNoteDate, isStale, toISODay } from '../lib/date.js'
-import { formatRange } from '../lib/roadmap.js'
+import { formatRange, sortFlags } from '../lib/roadmap.js'
 
 function Note({ note, upvoted, flagged, onUpvote, onFlag }) {
   const stale = isStale(note.date)
@@ -309,6 +309,26 @@ export default function StepDetail({
               first days clear.
             </p>
           </div>
+        )}
+
+        {step.redFlags?.length > 0 && (
+          <section className="card red-flags" aria-labelledby="rf-title">
+            <h2 className="card-label" id="rf-title">
+              <Alert size={13} /> <L zh="风险提示" en="Red flags" /> · sample
+            </h2>
+            <ul>
+              {sortFlags(step.redFlags).map((f) => (
+                <li key={f.en} className="rf-row">
+                  <LevelChip level={f.level} />
+                  <span className="rf-text">
+                    <span className="lz rf-zh">{f.zh}</span>
+                    <span className="le">{f.en}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="field-hint">Drawn from the student notes below — check the official rules.</p>
+          </section>
         )}
 
         {!step.custom && (

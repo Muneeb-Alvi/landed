@@ -96,3 +96,34 @@ export function Toast({ toast, onDismiss }) {
     </div>
   )
 }
+
+const LEVEL_TEXT = {
+  high: { zh: '高', en: 'HIGH' },
+  med: { zh: '中', en: 'MED' },
+  low: { zh: '低', en: 'LOW' },
+}
+
+/** Severity chip. The word carries the meaning; colour only reinforces it. */
+export function LevelChip({ level, count }) {
+  const t = LEVEL_TEXT[level]
+  return (
+    <span className={`level-chip ${level}`}>
+      <span className="lz">{t.zh}</span>
+      <span className="lsep"> </span>
+      <span className="le">{t.en}</span>
+      {count > 1 && <span aria-hidden="true"> ×{count}</span>}
+      {count > 1 && <span className="sr-only"> ({count} flags)</span>}
+    </span>
+  )
+}
+
+export function FlagChips({ summary }) {
+  if (!summary.length) return null
+  return (
+    <span className="flag-chips" aria-label="Red flags">
+      {summary.map((f) => (
+        <LevelChip key={f.level} level={f.level} count={f.count} />
+      ))}
+    </span>
+  )
+}

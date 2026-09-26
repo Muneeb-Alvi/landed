@@ -4,6 +4,7 @@ import Landing from './screens/Landing.jsx'
 import Onboarding from './screens/Onboarding.jsx'
 import RoadmapScreen from './screens/Roadmap.jsx'
 import StepDetail from './screens/StepDetail.jsx'
+import CheckDocument from './screens/CheckDocument.jsx'
 import { Toast } from './components/Chrome.jsx'
 import { buildRoadmap, newCustomId, stepNotes } from './lib/roadmap.js'
 import { useStored } from './lib/storage.js'
@@ -125,6 +126,7 @@ export default function App() {
                 actions={actions}
                 onOpen={(id) => navigate(`/step/${id}`)}
                 onEdit={() => navigate('/onboarding')}
+                onCheck={() => navigate('/check')}
               />
             ) : (
               <Navigate to="/onboarding" replace />
@@ -144,6 +146,7 @@ export default function App() {
             />
           }
         />
+        <Route path="/check" element={<CheckDocument onBack={() => navigate(roadmap ? '/roadmap' : '/')} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
       <Toast toast={toast} onDismiss={dismissToast} />
