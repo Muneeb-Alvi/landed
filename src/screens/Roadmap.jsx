@@ -52,7 +52,7 @@ function StepRow({ step, onToggle, onOpen }) {
         onClick={() => onToggle(step.id)}
       >
         <span className={`box${step.done ? ' checked' : ''}`}>
-          {step.done && <Check size={16} color="#F3EEE4" />}
+          {step.done && <Check size={16} color="var(--accent)" />}
         </span>
       </button>
 
@@ -109,15 +109,12 @@ export default function Roadmap({ answers, roadmap, onToggle, onOpen, onEdit }) 
           ))}
           {answers.family && (
             <span
-              className="mono"
+              className="mono pill-accent"
               style={{
-                background: '#E0592A',
-                color: '#0E2A2F',
                 padding: '3px 7px',
                 textTransform: 'none',
                 letterSpacing: '.04em',
                 fontSize: 11,
-                fontWeight: 600,
               }}
             >
               家属同行 With family
@@ -162,14 +159,14 @@ export default function Roadmap({ answers, roadmap, onToggle, onOpen, onEdit }) 
                 <p className="cd-num">
                   {nextStep.daysLeft < 0 ? `+${Math.abs(nextStep.daysLeft)}` : nextStep.daysLeft}
                 </p>
-                <p className="mono" style={{ color: '#B9C7C6', marginTop: 4 }}>
+                <p className="mono on-ink-muted" style={{ marginTop: 4 }}>
                   {nextStep.daysLeft < 0 ? 'days over' : 'days left'}
                 </p>
               </div>
               <div style={{ flex: 1 }}>
                 <p className="cd-step-zh">{nextStep.titleZh}</p>
                 <p className="cd-step-en">{nextStep.titleEn}</p>
-                <p className="mono" style={{ marginTop: 8, color: '#B9C7C6' }}>
+                <p className="mono on-ink-muted" style={{ marginTop: 8 }}>
                   {formatDay(nextStep.deadline)}
                 </p>
               </div>
@@ -202,7 +199,7 @@ export default function Roadmap({ answers, roadmap, onToggle, onOpen, onEdit }) 
             {roadmap.doneCount}
             <span style={{ fontSize: 20, color: 'var(--muted)' }}> / {roadmap.totalCount}</span>
           </p>
-          <div className="progress-track" style={{ marginTop: 10, background: 'rgba(26,29,30,.15)' }}>
+          <div className="progress-track on-paper" style={{ marginTop: 10 }}>
             <div
               className="progress-fill"
               style={{ width: `${(roadmap.doneCount / roadmap.totalCount) * 100}%` }}

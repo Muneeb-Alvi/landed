@@ -69,11 +69,11 @@ export default function StepDetail({
       <div className="detail-hero">
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <Chip>{stage.num}</Chip>
-          <span className="mono" style={{ color: '#B9C7C6' }}>
+          <span className="mono on-ink-muted">
             {stage.zh} · {stage.en}
           </span>
           <span className="spacer" style={{ flex: 1 }} />
-          <span className="mono" style={{ color: '#B9C7C6' }}>
+          <span className="mono on-ink-muted">
             Step {String(index).padStart(2, '0')}/{String(total).padStart(2, '0')}
           </span>
         </div>
@@ -117,8 +117,8 @@ export default function StepDetail({
 
       <div className="section">
         {step.deferred && (
-          <div className="card" style={{ background: '#E0592A', color: '#0E2A2F' }}>
-            <p className="card-label" style={{ color: '#0E2A2F' }}>
+          <div className="card accent">
+            <p className="card-label">
               <Alert size={13} /> 已推迟 · Moved to week two
             </p>
             <p style={{ fontSize: 14 }}>

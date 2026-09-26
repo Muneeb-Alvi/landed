@@ -33,7 +33,7 @@ export function AppBar({ onBack, backLabel = 'Back', right }) {
         </button>
       )}
       <span className="wordmark">
-        Landed<span style={{ color: '#E0592A' }}>.</span>
+        Landed<span className="wm-dot">.</span>
       </span>
       <span className="spacer" />
       {right}

@@ -5,7 +5,14 @@
   --text: #1a1d1e;
   --muted: #55595a;
   --on-ink: #b9c7c6;
-  --accent: #e0592a;
+  /* Accent. Yellow is for ink backgrounds and for fills that carry --ink text.
+     On --paper / --sand, thin lines and text use --accent-deep instead:
+     #765a00 is 5.6:1 on paper and 4.9:1 on sand (WCAG AA). */
+  --accent: #f5c518;
+  --accent-deep: #765a00;
+  /* Late-arrival / overdue. 5.7:1 on paper; paper text on it is 5.7:1. */
+  --urgent: #b3261e;
+  --focus: var(--accent-deep);
 
   --font-display: 'Big Shoulders Display', 'Arial Narrow', sans-serif;
   --font-sc: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -162,6 +169,18 @@ ul {
 
 /* ---------- ink bands ---------- */
 
+.band,
+.hero,
+.appbar,
+.detail-hero,
+.countdown,
+.stage-head,
+.footer-note,
+.progress-wrap,
+.card.ink {
+  --focus: var(--accent);
+}
+
 .band {
   background: var(--ink);
   color: var(--on-ink);
@@ -253,7 +272,7 @@ ul {
   min-height: 52px;
   padding: 12px 20px;
   width: 100%;
-  border: none;
+  border: 1.5px solid var(--ink);
   background: var(--accent);
   color: var(--ink);
   font-family: var(--font-display);
@@ -264,6 +283,7 @@ ul {
 }
 
 .btn:disabled {
+  border-color: rgba(26, 29, 30, 0.2);
   background: var(--sand);
   color: var(--muted);
   cursor: not-allowed;
@@ -452,7 +472,7 @@ ul {
 .side .side-num {
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--accent);
+  color: var(--accent-deep);
   font-weight: 600;
   letter-spacing: 0.1em;
 }
@@ -474,6 +494,14 @@ ul {
   height: 100%;
   background: var(--accent);
   transition: width 0.25s ease;
+}
+
+.progress-track.on-paper {
+  background: rgba(26, 29, 30, 0.15);
+}
+
+.progress-track.on-paper .progress-fill {
+  background: var(--accent-deep);
 }
 
 .progress-meta {
@@ -560,9 +588,9 @@ ul {
   border-radius: 0;
 }
 
-.date-field input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+.date-field input:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .toggle-row {
@@ -579,7 +607,7 @@ ul {
 }
 
 .toggle-row.on {
-  border-color: var(--accent);
+  border-color: var(--ink);
 }
 
 .switch {
@@ -593,7 +621,7 @@ ul {
 }
 
 .switch.on {
-  background: var(--accent);
+  background: var(--ink);
 }
 
 .switch span {
@@ -608,7 +636,7 @@ ul {
 
 .switch.on span {
   transform: translateX(20px);
-  background: var(--ink);
+  background: var(--accent);
 }
 
 .q-dock {
@@ -694,8 +722,8 @@ ul {
 }
 
 .urgent {
-  background: var(--accent);
-  color: var(--ink);
+  background: var(--urgent);
+  color: var(--paper);
   padding: 16px 18px;
   margin-bottom: 14px;
 }
@@ -726,7 +754,7 @@ ul {
   display: flex;
   gap: 10px;
   padding: 8px 0;
-  border-top: 1px solid rgba(14, 42, 47, 0.25);
+  border-top: 1px solid rgba(243, 238, 228, 0.3);
   font-size: 14.5px;
   align-items: baseline;
 }
@@ -766,7 +794,7 @@ ul {
 
 .cashflow .bar-fill {
   height: 100%;
-  background: var(--accent);
+  background: var(--accent-deep);
 }
 
 .cashflow .week-amt {
@@ -915,8 +943,9 @@ ul {
 }
 
 .days-badge.past {
-  background: rgba(26, 29, 30, 0.1);
-  color: var(--muted);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--urgent);
+  color: var(--urgent);
 }
 
 .tag {
@@ -930,8 +959,8 @@ ul {
 }
 
 .tag.accent {
-  border-color: var(--accent);
-  color: #a83a12;
+  border-color: var(--accent-deep);
+  color: var(--accent-deep);
 }
 
 .week2-note {
@@ -1007,7 +1036,7 @@ ul {
   font-family: var(--font-mono);
   font-size: 12px;
   letter-spacing: 0.04em;
-  color: #a83a12;
+  color: var(--accent-deep);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1087,7 +1116,7 @@ ul {
 
 .note-btn.on {
   background: var(--accent);
-  border-color: var(--accent);
+  border-color: var(--ink);
   color: var(--ink);
   font-weight: 600;
 }
@@ -1144,7 +1173,7 @@ ul {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -1152,4 +1181,29 @@ ul {
   * {
     transition: none !important;
   }
+}
+
+/* ---------- accent helpers ---------- */
+
+.wm-dot {
+  color: var(--accent);
+}
+
+.pill-accent {
+  background: var(--accent);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.card.accent {
+  background: var(--accent);
+  color: var(--ink);
+}
+
+.card.accent .card-label {
+  color: var(--ink);
+}
+
+.on-ink-muted {
+  color: var(--on-ink);
 }
