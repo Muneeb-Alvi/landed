@@ -45,23 +45,41 @@ export function appliesTo(step, answers, followUps = {}) {
 
 const cohortCampus = (cohort) => (/SIGS/i.test(cohort) ? 'sigs' : 'beijing')
 
+export const NOTE_SORTS = ['relevant', 'newest', 'upvoted']
+
+/** Turn a locally saved tip into the same shape as a seed note. */
+export function tipToNote(tip) {
+  return {
+    key: `tip|${tip.id}`,
+    tipId: tip.id,
+    mine: true,
+    cohort: tip.cohort,
+    date: tip.date,
+    text: tip.text,
+    wait: tip.wait,
+    cost: tip.cost,
+    upvotes: 0,
+  }
+}
+
 /**
- * Order notes within a step: same-campus notes first (they are the ones that
- * match the reader's situation), then newest, then most upvoted.
+ * Order notes within a step.
+ *   relevant  same-campus first, then newest, then most upvoted (default)
+ *   newest    newest first, then most upvoted
+ *   upvoted   most upvoted first, then newest
+ * Your own upvote counts toward the total.
  */
-function orderNotes(notes, answers, upvotes) {
-  return [...notes]
-    .map((n, i) => ({
-      ...n,
-      key: `${n.cohort}|${n.date}|${i}`,
-      matchesCampus: cohortCampus(n.cohort) === answers.campus,
-    }))
+export function orderNotes(notes, answers, upvotes = {}, sort = 'relevant') {
+  const votes = (n) => n.upvotes + (upvotes[n.key] ? 1 : 0)
+  const byDate = (a, b) => (a.date === b.date ? 0 : a.date < b.date ? 1 : -1)
+  const byVotes = (a, b) => votes(b) - votes(a)
+  return notes
+    .map((n) => ({ ...n, matchesCampus: cohortCampus(n.cohort) === answers?.campus }))
     .sort((a, b) => {
+      if (sort === 'newest') return byDate(a, b) || byVotes(a, b)
+      if (sort === 'upvoted') return byVotes(a, b) || byDate(a, b)
       if (a.matchesCampus !== b.matchesCampus) return a.matchesCampus ? -1 : 1
-      if (a.date !== b.date) return a.date < b.date ? 1 : -1
-      const av = a.upvotes + (upvotes?.[a.key] ? 1 : 0)
-      const bv = b.upvotes + (upvotes?.[b.key] ? 1 : 0)
-      return bv - av
+      return byDate(a, b) || byVotes(a, b)
     })
 }
 
@@ -69,8 +87,10 @@ export function getStep(id) {
   return STEPS.find((s) => s.id === id) || null
 }
 
-export function stepNotes(step, answers, upvotes) {
-  return orderNotes(step.notes || [], answers, upvotes)
+/** Seed notes plus this device's tips for one step, ordered. */
+export function stepNotes(step, answers, upvotes, tips = [], sort = 'relevant') {
+  const seed = (step.notes || []).map((n, i) => ({ ...n, key: `${n.cohort}|${n.date}|${i}` }))
+  return orderNotes([...seed, ...tips.map(tipToNote)], answers, upvotes, sort)
 }
 
 /**

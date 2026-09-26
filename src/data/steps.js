@@ -28,7 +28,9 @@
  *   hard         — a fixed deadline (legal clock or closing window); feeds KEY DATES
  *   redFlags     — [{ level: 'high'|'med'|'low', zh, en }] SAMPLE warnings, each
  *                  restating something already in this step's notes or requirement
- *   notes        — [{ cohort, date, text, upvotes }]
+ *   notes        — [{ cohort, date, text, upvotes, verified? }]
+ *                  verified is a SAMPLE flag standing in for "claimed profile,
+ *                  confirmed current student" — no verification exists yet.
  */
 
 export const STEPS = [
@@ -173,6 +175,7 @@ export const STEPS = [
         text:
           'Standard here was three months rent up front plus one month agency fee. That was the single biggest cash shock of my move.',
         upvotes: 112,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · SIGS',
@@ -180,6 +183,7 @@ export const STEPS = [
         text:
           'Ask for the landlord’s ownership certificate before signing. Without it the police station would not complete my accommodation registration.',
         upvotes: 96,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · Beijing',
@@ -226,6 +230,7 @@ export const STEPS = [
         text:
           'Bring the official form with you to the clinic and make them stamp every page plus the photo. My first set came back without the photo stamp and was refused.',
         upvotes: 104,
+        verified: true,
       },
       {
         cohort: 'Spring 2026 · SIGS',
@@ -264,6 +269,7 @@ export const STEPS = [
         text:
           'In late July the first free slot was 26 days away. Book the appointment the moment your JW202 arrives, even if the other papers are not ready yet.',
         upvotes: 131,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · SIGS',
@@ -303,6 +309,7 @@ export const STEPS = [
         text:
           '"Four working days" meant nine calendar days in August because of the weekend and the backlog. Do not book a non-refundable flight until the passport is physically back.',
         upvotes: 148,
+        verified: true,
       },
       {
         cohort: 'Spring 2026 · SIGS',
@@ -317,6 +324,7 @@ export const STEPS = [
         text:
           'They kept my original JW202. Scan and photograph everything before you hand the folder over.',
         upvotes: 91,
+        verified: true,
       },
     ],
   },
@@ -387,6 +395,7 @@ export const STEPS = [
         text:
           'The relationship documents were the long pole, not the visa. Notarised translation of our marriage certificate took 16 days on its own — start it the week your JW202 lands.',
         upvotes: 118,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · SIGS',
@@ -421,6 +430,7 @@ export const STEPS = [
         text:
           'Landing at 23:40 was a mistake. Dorm reception had closed, and one night in an airport hotel cost more than my first week of food.',
         upvotes: 126,
+        verified: true,
       },
       {
         cohort: 'Spring 2026 · SIGS',
@@ -435,6 +445,7 @@ export const STEPS = [
         text:
           'Arrive two or three days before registration opens, not on the day. Every queue that week is long and nothing can be fixed at the weekend.',
         upvotes: 97,
+        verified: true,
       },
     ],
   },
@@ -459,6 +470,7 @@ export const STEPS = [
         text:
           'My scholarship was real, but it paid out five weeks after I landed. Everything in weeks one and two came out of my own pocket.',
         upvotes: 156,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · SIGS',
@@ -466,6 +478,7 @@ export const STEPS = [
         text:
           'Bedding, a deposit, the health check and a SIM all hit within four days of arrival. That cluster is what catches people out, not the tuition.',
         upvotes: 109,
+        verified: true,
       },
     ],
   },
@@ -505,6 +518,7 @@ export const STEPS = [
         text:
           'Tell your home bank you are travelling. Mine blocked the card on my second ATM withdrawal and the fix needed a phone call I could not make without a working SIM.',
         upvotes: 142,
+        verified: true,
       },
       {
         cohort: 'Spring 2026 · SIGS',
@@ -512,6 +526,7 @@ export const STEPS = [
         text:
           'The dorm deposit was cash only on my check-in day. Carrying roughly CNY 5,000 in cash for week one was what saved me.',
         upvotes: 121,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · Beijing',
@@ -546,6 +561,7 @@ export const STEPS = [
         text:
           'Bring 8–10 passport photos on white background. I needed them for the campus card, the bank and the exit-entry bureau, and the photo shop queue that week was 40 minutes.',
         upvotes: 167,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · SIGS',
@@ -553,6 +569,7 @@ export const STEPS = [
         text:
           'Dorm bedding was not included and the campus shop sold out by day three. A basic set ran about CNY 400.',
         upvotes: 94,
+        verified: true,
       },
       {
         cohort: 'Spring 2026 · Beijing',
@@ -588,6 +605,7 @@ export const STEPS = [
         text:
           'Go on the second morning, not the first. Friends who went on day one queued three hours; I was done in 40 minutes.',
         upvotes: 133,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · SIGS',
@@ -602,6 +620,7 @@ export const STEPS = [
         text:
           'Nothing else unlocks until this is stamped. Campus card, course registration and the residence permit letter all wanted proof of registration.',
         upvotes: 102,
+        verified: true,
       },
     ],
   },
@@ -634,6 +653,7 @@ export const STEPS = [
         text:
           '24 hours is taken literally. Arrange the landlord meeting before you fly — mine was out of the city and I registered a day late.',
         upvotes: 154,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · SIGS',
@@ -641,6 +661,7 @@ export const STEPS = [
         text:
           'You get a registration slip. Guard it — the exit-entry bureau asked for it later and a reprint meant going back to the station.',
         upvotes: 97,
+        verified: true,
       },
       {
         cohort: 'Spring 2026 · Beijing',
@@ -709,6 +730,7 @@ export const STEPS = [
         text:
           'Do this before the bank, not after. The account application needed a local mobile number and I had to give up my place in the queue.',
         upvotes: 171,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · SIGS',
@@ -748,6 +770,7 @@ export const STEPS = [
         text:
           'Linked a foreign card to Alipay on day two and it covered nearly everything. That bridged the three weeks before my local card worked.',
         upvotes: 188,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · SIGS',
@@ -755,6 +778,7 @@ export const STEPS = [
         text:
           'Name must match your passport exactly, including middle names. My verification failed twice over a missing middle name.',
         upvotes: 95,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · Beijing',
@@ -825,6 +849,7 @@ export const STEPS = [
         text:
           'My home chest X-ray was not accepted and I repeated it here for about CNY 450. Budget for a re-test even if you did everything right.',
         upvotes: 124,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · SIGS',
@@ -832,6 +857,7 @@ export const STEPS = [
         text:
           'This gates the residence permit, and the permit has a 30-day clock. Book the verification in your first week, not your third.',
         upvotes: 111,
+        verified: true,
       },
     ],
   },
@@ -862,6 +888,7 @@ export const STEPS = [
         text:
           'Popular courses filled in the first hour of the window. Have a ranked backup list ready before it opens.',
         upvotes: 98,
+        verified: true,
       },
       {
         cohort: 'Spring 2026 · SIGS',
@@ -900,6 +927,7 @@ export const STEPS = [
         text:
           'Turned away at one branch for not having my residence permit yet, accepted at another two streets away with just the X1 and a student letter. If you are refused, try a different branch.',
         upvotes: 163,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · SIGS',
@@ -946,6 +974,7 @@ export const STEPS = [
         text:
           'They keep your passport for the whole processing period. No domestic flights, no hotel check-in, no bank appointment in that window — plan around it.',
         upvotes: 192,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · SIGS',
@@ -953,6 +982,7 @@ export const STEPS = [
         text:
           'The 30 days counts from entry, not from registration. I started on day 21 and the health certificate was not ready, which was uncomfortably close.',
         upvotes: 145,
+        verified: true,
       },
       {
         cohort: 'Fall 2025 · Beijing',
@@ -960,6 +990,7 @@ export const STEPS = [
         text:
           'The international student office submitted ours as a batch and it was far smoother than going alone. Ask whether your office does this before booking your own slot.',
         upvotes: 108,
+        verified: true,
       },
     ],
   },

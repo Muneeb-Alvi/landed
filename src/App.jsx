@@ -8,6 +8,7 @@ import CheckDocument from './screens/CheckDocument.jsx'
 import { Toast } from './components/Chrome.jsx'
 import { buildRoadmap, newCustomId, stepNotes } from './lib/roadmap.js'
 import { useStored } from './lib/storage.js'
+import { toISODay, today } from './lib/date.js'
 
 export default function App() {
   const navigate = useNavigate()
@@ -20,6 +21,7 @@ export default function App() {
   const [custom, setCustom] = useStored('custom')
   const [myNotes, setMyNotes] = useStored('myNotes')
   const [followUps, setFollowUps] = useStored('followUps')
+  const [tips, setTips] = useStored('tips')
 
   const [toast, setToast] = useState(null)
   const toastSeq = useRef(0)
@@ -91,6 +93,32 @@ export default function App() {
     answerFollowUp(key, value) {
       setFollowUps((f) => (value === undefined ? without(f, key) : { ...f, [key]: value }))
     },
+    addTip(stepId, fields) {
+      const tip = { id: newCustomId().replace('custom', 'tip'), date: toISODay(today()), ...fields }
+      setTips((t) => ({ ...t, [stepId]: [...(t[stepId] || []), tip] }))
+      showToast({ zh: '已保存在此设备', en: 'Tip saved on this device' })
+    },
+    deleteTip(stepId, tipId) {
+      const list = tips[stepId] || []
+      const index = list.findIndex((x) => x.id === tipId)
+      const removed = list[index]
+      if (!removed) return
+      setTips((t) => ({ ...t, [stepId]: (t[stepId] || []).filter((x) => x.id !== tipId) }))
+      showToast({
+        zh: '已删除',
+        en: 'Tip deleted',
+        action: {
+          zh: '撤销',
+          en: 'Undo',
+          run: () =>
+            setTips((t) => {
+              const next = [...(t[stepId] || [])]
+              next.splice(index, 0, removed)
+              return { ...t, [stepId]: next }
+            }),
+        },
+      })
+    },
     setMyNote(id, text) {
       setMyNotes((n) => (text ? { ...n, [id]: text } : without(n, id)))
     },
@@ -149,6 +177,7 @@ export default function App() {
               flags={flags}
               myNotes={myNotes}
               followUps={followUps}
+              tips={tips}
               actions={actions}
             />
           }
@@ -161,7 +190,7 @@ export default function App() {
   )
 }
 
-function StepDetailRoute({ roadmap, answers, upvotes, flags, myNotes, followUps, actions }) {
+function StepDetailRoute({ roadmap, answers, upvotes, flags, myNotes, followUps, tips, actions }) {
   const { id } = useParams()
   const navigate = useNavigate()
 
@@ -180,7 +209,7 @@ function StepDetailRoute({ roadmap, answers, upvotes, flags, myNotes, followUps,
       isSkipped={!!skippedStep}
       answers={answers}
       followUps={followUps}
-      notes={stepNotes(step, answers, upvotes)}
+      getNotes={(sort) => stepNotes(step, answers, upvotes, tips[step.id] || [], sort)}
       upvotes={upvotes}
       flags={flags}
       myNote={myNotes[step.id] || ''}

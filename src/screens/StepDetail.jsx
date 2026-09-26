@@ -9,6 +9,7 @@ import {
   External,
   EyeOff,
   Flag,
+  Plus,
   Refresh,
   ThumbUp,
   Trash,
@@ -99,13 +100,23 @@ function VerdictBlock({ step, answers, followUps, onAnswer }) {
   )
 }
 
-function Note({ note, upvoted, flagged, onUpvote, onFlag }) {
+function Note({ note, upvoted, flagged, onUpvote, onFlag, onDelete }) {
   const stale = isStale(note.date)
   const count = note.upvotes + (upvoted ? 1 : 0)
   return (
-    <li className={`note${stale ? ' stale' : ''}`}>
+    <li className={`note${stale ? ' stale' : ''}${note.mine ? ' mine' : ''}`}>
       <div className="note-head">
         <span className="cohort">{note.cohort}</span>
+        {note.verified && (
+          <span className="verified" title="Sample flag — no verification exists in this prototype">
+            <Check size={12} /> <L zh="认证在读生" en="Verified current student" />
+          </span>
+        )}
+        {note.mine && (
+          <span className="tag mine-tag">
+            <L zh="你的情报 · 仅此设备" en="Your tip · only on this device" sep=" / " />
+          </span>
+        )}
         <span className="note-date">{formatNoteDate(note.date)}</span>
         {stale && (
           <span className="tag">
@@ -119,28 +130,238 @@ function Note({ note, upvoted, flagged, onUpvote, onFlag }) {
         )}
       </div>
       <p className="note-text">{note.text}</p>
+      {(note.wait || note.cost > 0) && (
+        <p className="note-facts">
+          {note.wait && (
+            <span>
+              <Clock size={12} /> {note.wait}
+            </span>
+          )}
+          {note.cost > 0 && (
+            <span>
+              <Coins size={12} /> {formatRange([note.cost, note.cost])}
+            </span>
+          )}
+        </p>
+      )}
       <div className="note-actions">
-        <button
-          type="button"
-          className={`note-btn${upvoted ? ' on' : ''}`}
-          aria-pressed={upvoted}
-          aria-label={`Helpful — ${count} upvotes`}
-          onClick={() => onUpvote(note.key)}
-        >
-          <ThumbUp size={15} />
-          <span aria-hidden="true">{count}</span>
-        </button>
-        <button
-          type="button"
-          className={`note-btn flag${flagged ? ' on' : ''}`}
-          aria-pressed={flagged}
-          onClick={() => onFlag(note.key)}
-        >
-          <Flag size={15} />
-          <span>This changed</span>
-        </button>
+        {note.mine ? (
+          <button type="button" className="note-btn" onClick={onDelete}>
+            <Trash size={15} />
+            <span>Delete</span>
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              className={`note-btn${upvoted ? ' on' : ''}`}
+              aria-pressed={upvoted}
+              aria-label={`Helpful — ${count} upvotes`}
+              onClick={() => onUpvote(note.key)}
+            >
+              <ThumbUp size={15} />
+              <span aria-hidden="true">{count}</span>
+            </button>
+            <button
+              type="button"
+              className={`note-btn flag${flagged ? ' on' : ''}`}
+              aria-pressed={flagged}
+              onClick={() => onFlag(note.key)}
+            >
+              <Flag size={15} />
+              <span>This changed</span>
+            </button>
+          </>
+        )}
       </div>
     </li>
+  )
+}
+
+const SORTS = [
+  { id: 'relevant', zh: '最相关', en: 'Most relevant' },
+  { id: 'newest', zh: '最新', en: 'Newest' },
+  { id: 'upvoted', zh: '最多赞', en: 'Most upvoted' },
+]
+
+const thisYear = new Date().getFullYear()
+const COHORT_YEARS = [thisYear + 1, thisYear, thisYear - 1, thisYear - 2]
+
+/** Share a tip. Saved on this device only — there is no server to send it to. */
+function ShareTipForm({ defaultCampus, onSave, onClose }) {
+  const [season, setSeason] = useState('Fall')
+  const [year, setYear] = useState(String(thisYear))
+  const [campus, setCampus] = useState(defaultCampus === 'sigs' ? 'SIGS' : 'Beijing')
+  const [wait, setWait] = useState('')
+  const [cost, setCost] = useState('')
+  const [text, setText] = useState('')
+  const valid = text.trim().length >= 10
+
+  const submit = (e) => {
+    e.preventDefault()
+    if (!valid) return
+    onSave({
+      cohort: `${season} ${year} · ${campus}`,
+      wait: wait.trim(),
+      cost: cost ? Math.max(0, Number(cost)) : 0,
+      text: text.trim(),
+    })
+    onClose()
+  }
+
+  return (
+    <form className="card form-card" onSubmit={submit} aria-labelledby="tip-title">
+      <Bilingual zh="分享一条情报" en="Share a tip" size="sm" as="h3" id="tip-title" />
+      <p className="field-hint" style={{ marginTop: -6, marginBottom: 12 }}>
+        Saved on this device only. Nothing is posted anywhere.
+      </p>
+      <div className="field-row">
+        <label className="field">
+          <span className="field-label">
+            <L zh="入学" en="Cohort" />
+          </span>
+          <select value={season} onChange={(e) => setSeason(e.target.value)}>
+            <option>Fall</option>
+            <option>Spring</option>
+          </select>
+        </label>
+        <label className="field">
+          <span className="field-label">
+            <L zh="年份" en="Year" />
+          </span>
+          <select value={year} onChange={(e) => setYear(e.target.value)}>
+            {COHORT_YEARS.map((y) => (
+              <option key={y}>{y}</option>
+            ))}
+          </select>
+        </label>
+        <label className="field">
+          <span className="field-label">
+            <L zh="校区" en="Campus" />
+          </span>
+          <select value={campus} onChange={(e) => setCampus(e.target.value)}>
+            <option>Beijing</option>
+            <option>SIGS</option>
+          </select>
+        </label>
+      </div>
+      <div className="field-row">
+        <label className="field">
+          <span className="field-label">
+            <L zh="实际耗时" en="Real wait" />
+          </span>
+          <input
+            type="text"
+            value={wait}
+            maxLength={60}
+            placeholder="e.g. 9 days"
+            onChange={(e) => setWait(e.target.value)}
+          />
+        </label>
+        <label className="field">
+          <span className="field-label">
+            <L zh="费用" en="Cost (CNY)" />
+          </span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="0"
+            value={cost}
+            placeholder="0"
+            onChange={(e) => setCost(e.target.value)}
+          />
+        </label>
+      </div>
+      <label className="field">
+        <span className="field-label">
+          <L zh="情报" en="Your tip" /> *
+        </span>
+        <textarea
+          rows={3}
+          value={text}
+          maxLength={500}
+          required
+          placeholder="One thing you wish you had known."
+          onChange={(e) => setText(e.target.value)}
+        />
+        <span className="field-hint">{text.trim().length < 10 ? 'At least 10 characters' : `${text.length}/500`}</span>
+      </label>
+      <div className="form-actions">
+        <button type="button" className="btn secondary small" onClick={onClose}>
+          <L zh="取消" en="Cancel" />
+        </button>
+        <button type="submit" className="btn small" disabled={!valid}>
+          <L zh="保存" en="Save tip" />
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function StudentIntel({ step, answers, getNotes, upvotes, flags, actions }) {
+  const [sort, setSort] = useState('relevant')
+  const [sharing, setSharing] = useState(false)
+  const notes = getNotes(sort)
+  return (
+    <section aria-labelledby="intel-title">
+      <div className="section-head" style={{ marginBottom: 12 }}>
+        <Chip ghost>02</Chip>
+        <Bilingual zh="学生情报" en="Student intel" size="sm" id="intel-title" />
+      </div>
+      <p className="muted" style={{ fontSize: 13, marginBottom: 12 }}>
+        Notes from recent students. They add timing and cost — they never replace the official
+        rules. Upvotes, flags and your own tips stay on this device.
+      </p>
+
+      <div className="seg" role="radiogroup" aria-label="Sort notes">
+        {SORTS.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            role="radio"
+            aria-checked={sort === o.id}
+            className={`seg-btn${sort === o.id ? ' on' : ''}`}
+            onClick={() => setSort(o.id)}
+          >
+            <L zh={o.zh} en={o.en} sep=" " />
+          </button>
+        ))}
+      </div>
+
+      {notes.length === 0 ? (
+        <div className="empty-state" style={{ marginBottom: 12 }}>
+          <p className="empty-zh">还没有情报</p>
+          <p className="empty-en">No notes for this step yet.</p>
+        </div>
+      ) : (
+        <ul>
+          {notes.map((n) => (
+            <Note
+              key={n.key}
+              note={n}
+              upvoted={!!upvotes[n.key]}
+              flagged={!!flags[n.key]}
+              onUpvote={actions.toggleUpvote}
+              onFlag={actions.toggleFlag}
+              onDelete={() => actions.deleteTip(step.id, n.tipId)}
+            />
+          ))}
+        </ul>
+      )}
+
+      {sharing ? (
+        <ShareTipForm
+          defaultCampus={answers?.campus}
+          onSave={(tip) => actions.addTip(step.id, tip)}
+          onClose={() => setSharing(false)}
+        />
+      ) : (
+        <button type="button" className="add-step" onClick={() => setSharing(true)}>
+          <Plus size={20} />
+          <L zh="分享一条情报" en="Share a tip" />
+        </button>
+      )}
+    </section>
   )
 }
 
@@ -284,7 +505,7 @@ export default function StepDetail({
   isSkipped,
   answers,
   followUps,
-  notes,
+  getNotes,
   upvotes,
   flags,
   myNote,
@@ -469,28 +690,14 @@ export default function StepDetail({
         {!step.custom && (
           <>
             <div className="divider" />
-
-            <div className="section-head" style={{ marginBottom: 12 }}>
-              <Chip ghost>02</Chip>
-              <Bilingual zh="学生情报" en="Student intel" size="sm" />
-            </div>
-            <p className="muted" style={{ fontSize: 13, marginBottom: 14 }}>
-              Notes from recent students. Notes add timing and cost — they never replace the
-              official rules. Upvotes and flags are saved on this device only.
-            </p>
-
-            <ul>
-              {notes.map((n) => (
-                <Note
-                  key={n.key}
-                  note={n}
-                  upvoted={!!upvotes[n.key]}
-                  flagged={!!flags[n.key]}
-                  onUpvote={actions.toggleUpvote}
-                  onFlag={actions.toggleFlag}
-                />
-              ))}
-            </ul>
+            <StudentIntel
+              step={step}
+              answers={answers}
+              getNotes={getNotes}
+              upvotes={upvotes}
+              flags={flags}
+              actions={actions}
+            />
           </>
         )}
       </div>

@@ -2246,3 +2246,84 @@ ul {
   margin-top: 4px;
   line-height: 1.4;
 }
+
+/* ---------- student intel ---------- */
+
+.verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent-deep);
+  box-shadow: inset 0 0 0 1px var(--accent-deep);
+  padding: 2px 6px;
+}
+
+.note.mine {
+  background: var(--paper);
+  border: 1.5px dashed var(--ink);
+}
+
+.mine-tag {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.note-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.note-facts span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.seg {
+  display: flex;
+  border: 1.5px solid var(--ink);
+  margin-bottom: 14px;
+}
+
+.seg-btn {
+  flex: 1;
+  min-height: 44px;
+  padding: 6px 8px;
+  background: transparent;
+  border: none;
+  border-left: 1.5px solid var(--ink);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.25;
+}
+
+.seg-btn:first-child {
+  border-left: none;
+}
+
+.seg-btn.on {
+  background: var(--ink);
+  color: #fff;
+}
+
+.seg-btn .lz {
+  font-family: var(--font-sc);
+  display: block;
+  letter-spacing: 0;
+}
+
+.seg-btn .lsep {
+  display: none;
+}
