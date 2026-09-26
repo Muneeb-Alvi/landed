@@ -130,3 +130,36 @@ export const ChevronDown = (p) => (
     <path d="M5 9l7 7 7-7" />
   </Svg>
 )
+
+export const Close = (p) => (
+  <Svg {...p}>
+    <path d="M6 6l12 12M18 6L6 18" />
+  </Svg>
+)
+
+export const EyeOff = (p) => (
+  <Svg {...p}>
+    <path d="M3 3l18 18" />
+    <path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c5.5 0 9 7 9 7a16.4 16.4 0 0 1-2.9 3.7M6.6 6.6C4.3 8.1 3 12 3 12s3.5 7 9 7a9.5 9.5 0 0 0 4.4-1.1" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+  </Svg>
+)
+
+export const Plus = (p) => (
+  <Svg {...p}>
+    <path d="M12 5v14M5 12h14" />
+  </Svg>
+)
+
+export const Pencil = (p) => (
+  <Svg {...p}>
+    <path d="M4 20h4L19 9l-4-4L4 16z" />
+    <path d="M13.5 6.5l4 4" />
+  </Svg>
+)
+
+export const Trash = (p) => (
+  <Svg {...p}>
+    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3" />
+  </Svg>
+)

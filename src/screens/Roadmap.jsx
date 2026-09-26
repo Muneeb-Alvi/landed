@@ -8,10 +8,13 @@ import {
   ChevronRight,
   Clock,
   Coins,
+  EyeOff,
+  Plus,
   Refresh,
 } from '../components/Icons.jsx'
 import { ANSWER_LABELS } from '../data/labels.js'
-import { formatDay } from '../lib/date.js'
+import { STAGES } from '../data/stages.js'
+import { formatDay, toISODay } from '../lib/date.js'
 import { daysLabel, formatRange, LATE_ARRIVAL_DAYS } from '../lib/roadmap.js'
 
 function CheckBox({ step, onToggle, label }) {
@@ -71,31 +74,69 @@ function ThisWeek({ roadmap, onToggle, onOpen }) {
   )
 }
 
-function StepRow({ step, onToggle, onOpen }) {
+function StepRow({ step, actions, onOpen }) {
   const badge = daysLabel(step.daysLeft)
   return (
     <li className={`step-row${step.done ? ' done' : ''}`}>
-      <CheckBox step={step} onToggle={onToggle} />
+      <CheckBox step={step} onToggle={actions.toggleStep} />
 
       <button type="button" className="step-open" onClick={() => onOpen(step.id)}>
-        <span style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-          <span style={{ flex: 1 }}>
-            <span className="st-zh">{step.titleZh}</span>
-            <br />
-            <span className="st-en">{step.titleEn}</span>
-          </span>
-          <ChevronRight size={18} />
+        <span className="st-title">
+          {step.custom ? (
+            <span className="st-custom">{step.titleEn}</span>
+          ) : (
+            <>
+              <span className="st-zh">{step.titleZh}</span>
+              <span className="st-en">{step.titleEn}</span>
+            </>
+          )}
         </span>
         <span className="step-meta">
           <span className="date-badge">{formatDay(step.deadline)}</span>
           <span className={`days-badge ${badge.tone}`}>{badge.text}</span>
-          {step.costCNY[1] > 0 && (
-            <span className="date-badge">{formatRange(step.costCNY)}</span>
+          {step.costCNY[1] > 0 && <span className="date-badge">{formatRange(step.costCNY)}</span>}
+          {step.custom && (
+            <span className="tag">
+              <L zh="自定义" en="Your step" />
+            </span>
           )}
-          {step.deferred && <span className="tag accent">推迟 · Week 2</span>}
-          {step.shortStay && step.shortStayTip && <span className="tag">短期 · Short stay</span>}
+          {step.moved && (
+            <span className="tag accent">
+              <L zh="已改期" en="Moved" />
+            </span>
+          )}
+          {step.deferred && (
+            <span className="tag accent">
+              <L zh="推迟" en="Week 2" />
+            </span>
+          )}
+          {step.shortStay && step.shortStayTip && (
+            <span className="tag">
+              <L zh="短期" en="Short stay" />
+            </span>
+          )}
         </span>
+        {step.moved && (
+          <span className="suggested">
+            <L zh="建议日期" en="Suggested" /> {formatDay(step.suggestedDeadline)}
+          </span>
+        )}
       </button>
+
+      <span className="row-actions">
+        <ChevronRight size={18} className="row-chev" />
+        {!step.custom && (
+          <button
+            type="button"
+            className="row-hide"
+            aria-label={`Not relevant to me: hide "${step.titleEn}"`}
+            title="Not relevant to me"
+            onClick={() => actions.hideStep(step)}
+          >
+            <EyeOff size={18} />
+          </button>
+        )}
+      </span>
     </li>
   )
 }
@@ -110,7 +151,7 @@ function initialOpenStages(roadmap) {
   return open
 }
 
-function StageBlock({ stage, open, onToggleOpen, lateArrival, onToggle, onOpen }) {
+function StageBlock({ stage, open, onToggleOpen, lateArrival, actions, onOpen }) {
   const done = stage.steps.filter((s) => s.done).length
   const listId = `stage-list-${stage.id}`
   return (
@@ -138,7 +179,7 @@ function StageBlock({ stage, open, onToggleOpen, lateArrival, onToggle, onOpen }
       <div id={listId} className="stage-list" hidden={!open}>
         <ul>
           {stage.steps.map((s) => (
-            <StepRow key={s.id} step={s} onToggle={onToggle} onOpen={onOpen} />
+            <StepRow key={s.id} step={s} actions={actions} onOpen={onOpen} />
           ))}
         </ul>
         {lateArrival && stage.steps.some((s) => s.deferred) && (
@@ -151,9 +192,125 @@ function StageBlock({ stage, open, onToggleOpen, lateArrival, onToggle, onOpen }
   )
 }
 
-export default function Roadmap({ answers, roadmap, onToggle, onOpen, onEdit }) {
+/** Inline form for a student-added step. */
+function AddStepForm({ defaultDate, onAdd, onClose }) {
+  const [title, setTitle] = useState('')
+  const [date, setDate] = useState(defaultDate)
+  const [stage, setStage] = useState('predeparture')
+  const [cost, setCost] = useState('')
+  const valid = title.trim() && date
+
+  const submit = (e) => {
+    e.preventDefault()
+    if (!valid) return
+    onAdd({ title: title.trim(), date, stage, cost: cost ? Math.max(0, Number(cost)) : 0 })
+    onClose()
+  }
+
+  return (
+    <form className="card form-card" onSubmit={submit} aria-labelledby="add-step-title">
+      <Bilingual zh="添加我的步骤" en="Add your own step" size="sm" as="h3" id="add-step-title" />
+      <label className="field">
+        <span className="field-label">
+          <L zh="标题" en="Title" /> *
+        </span>
+        <input
+          type="text"
+          value={title}
+          maxLength={80}
+          required
+          autoFocus
+          placeholder="e.g. Renew home driving licence"
+          onChange={(e) => setTitle(e.target.value)}
+        />
+      </label>
+      <div className="field-row">
+        <label className="field">
+          <span className="field-label">
+            <L zh="日期" en="Date" /> *
+          </span>
+          <input type="date" value={date} required onChange={(e) => setDate(e.target.value)} />
+        </label>
+        <label className="field">
+          <span className="field-label">
+            <L zh="费用" en="Cost (CNY)" />
+          </span>
+          <input
+            type="number"
+            inputMode="numeric"
+            min="0"
+            step="1"
+            value={cost}
+            placeholder="0"
+            onChange={(e) => setCost(e.target.value)}
+          />
+        </label>
+      </div>
+      <label className="field">
+        <span className="field-label">
+          <L zh="阶段" en="Stage" />
+        </span>
+        <select value={stage} onChange={(e) => setStage(e.target.value)}>
+          {STAGES.map((st) => (
+            <option key={st.id} value={st.id}>
+              {st.num} {st.zh} · {st.en}
+            </option>
+          ))}
+        </select>
+      </label>
+      <div className="form-actions">
+        <button type="button" className="btn secondary small" onClick={onClose}>
+          <L zh="取消" en="Cancel" />
+        </button>
+        <button type="submit" className="btn small" disabled={!valid}>
+          <L zh="添加" en="Add step" />
+        </button>
+      </div>
+    </form>
+  )
+}
+
+function HiddenSteps({ steps, onRestore, onOpen }) {
+  const [open, setOpen] = useState(false)
+  if (steps.length === 0) return null
+  return (
+    <section className="hidden-steps">
+      <h3 className="stage-h">
+        <button
+          type="button"
+          className="fold-head"
+          aria-expanded={open}
+          aria-controls="hidden-list"
+          onClick={() => setOpen((o) => !o)}
+        >
+          <EyeOff size={18} />
+          <span>
+            <L zh="已隐藏的步骤" en="Hidden steps" /> ({steps.length})
+          </span>
+          <ChevronDown size={18} className={`s-chev${open ? ' open' : ''}`} />
+        </button>
+      </h3>
+      <ul id="hidden-list" hidden={!open}>
+        {steps.map((s) => (
+          <li key={s.id} className="hidden-row">
+            <button type="button" className="hidden-open" onClick={() => onOpen(s.id)}>
+              <span className="st-zh">{s.titleZh}</span>
+              <span className="st-en">{s.titleEn}</span>
+            </button>
+            <button type="button" className="btn secondary small" onClick={() => onRestore(s.id)}>
+              <L zh="恢复" en="Restore" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+export default function Roadmap({ answers, roadmap, actions, onOpen, onEdit }) {
   const { nextStep, lateArrival, cashflow } = roadmap
   const [openStages, setOpenStages] = useState(() => initialOpenStages(roadmap))
+  const [adding, setAdding] = useState(false)
   const allOpen = roadmap.byStage.every((st) => openStages.has(st.id))
 
   const toggleStage = (id) =>
@@ -191,7 +348,7 @@ export default function Roadmap({ answers, roadmap, onToggle, onOpen, onEdit }) 
       </div>
 
       <div className="section">
-        <ThisWeek roadmap={roadmap} onToggle={onToggle} onOpen={onOpen} />
+        <ThisWeek roadmap={roadmap} onToggle={actions.toggleStep} onOpen={onOpen} />
         {nextStep && (
           <div className="countdown">
             <p className="card-label">下一个截止 · Next deadline</p>
@@ -231,6 +388,11 @@ export default function Roadmap({ answers, roadmap, onToggle, onOpen, onEdit }) 
             <p className="stat-sub">CNY · sample</p>
           </div>
         </div>
+        {roadmap.laterCost[1] > 0 && (
+          <p className="later-cost">
+            <L zh="30天之后" en="After day 30" /> · {formatRange(roadmap.laterCost)}
+          </p>
+        )}
 
         <div className="stat" style={{ marginBottom: 14 }}>
           <p className="card-label">
@@ -318,10 +480,25 @@ export default function Roadmap({ answers, roadmap, onToggle, onOpen, onEdit }) 
             open={openStages.has(stage.id)}
             onToggleOpen={toggleStage}
             lateArrival={lateArrival}
-            onToggle={onToggle}
+            actions={actions}
             onOpen={onOpen}
           />
         ))}
+
+        {adding ? (
+          <AddStepForm
+            defaultDate={toISODay(roadmap.arrival)}
+            onAdd={actions.addCustom}
+            onClose={() => setAdding(false)}
+          />
+        ) : (
+          <button type="button" className="add-step" onClick={() => setAdding(true)}>
+            <Plus size={20} />
+            <L zh="添加我的步骤" en="Add your own step" />
+          </button>
+        )}
+
+        <HiddenSteps steps={roadmap.hiddenSteps} onRestore={actions.restoreStep} onOpen={onOpen} />
       </div>
 
       <div className="detail-dock">

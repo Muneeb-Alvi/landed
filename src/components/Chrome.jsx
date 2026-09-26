@@ -1,9 +1,10 @@
-import { Alert, ArrowLeft } from './Icons.jsx'
+import { useEffect } from 'react'
+import { Alert, ArrowLeft, Close } from './Icons.jsx'
 
 /** Bilingual heading: Chinese on top, English caps underneath. */
-export function Bilingual({ zh, en, size, onInk, as: Tag = 'h2' }) {
+export function Bilingual({ zh, en, size, onInk, as: Tag = 'h2', id }) {
   return (
-    <Tag className={`bi${size === 'sm' ? ' sm' : ''}${onInk ? ' on-ink' : ''}`}>
+    <Tag id={id} className={`bi${size === 'sm' ? ' sm' : ''}${onInk ? ' on-ink' : ''}`}>
       <span className="bi-zh">{zh}</span>
       <span className="bi-en">{en}</span>
     </Tag>
@@ -52,5 +53,46 @@ export function AppBar({ onBack, backLabel = 'Back', right }) {
       <span className="spacer" />
       {right}
     </header>
+  )
+}
+
+const TOAST_MS = 6000
+
+/**
+ * One toast at a time, bottom of the screen, with an optional action (Undo).
+ * The live region is always mounted so screen readers announce new messages.
+ */
+export function Toast({ toast, onDismiss }) {
+  useEffect(() => {
+    if (!toast) return undefined
+    const t = window.setTimeout(onDismiss, TOAST_MS)
+    return () => window.clearTimeout(t)
+  }, [toast, onDismiss])
+
+  return (
+    <div className="toast-region" role="status" aria-live="polite">
+      {toast && (
+        <div className="toast" key={toast.id}>
+          <span className="toast-msg">
+            <L zh={toast.zh} en={toast.en} />
+          </span>
+          {toast.action && (
+            <button
+              type="button"
+              className="toast-action"
+              onClick={() => {
+                toast.action.run()
+                onDismiss()
+              }}
+            >
+              <L zh={toast.action.zh} en={toast.action.en} sep=" " />
+            </button>
+          )}
+          <button type="button" className="toast-close" aria-label="Dismiss" onClick={onDismiss}>
+            <Close size={18} />
+          </button>
+        </div>
+      )}
+    </div>
   )
 }

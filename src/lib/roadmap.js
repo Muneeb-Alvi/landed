@@ -2,6 +2,25 @@ import { STEPS } from '../data/steps.js'
 import { STAGES } from '../data/stages.js'
 import { addDays, daysBetween, parseDay, today as todayFn } from './date.js'
 
+/** A student-added step, shaped like a seed step so it sits in the same timeline. */
+export function customToStep(c) {
+  const cost = Math.max(0, Number(c.cost) || 0)
+  return {
+    id: c.id,
+    custom: true,
+    stage: c.stage,
+    title: c.title,
+    titleZh: c.title || 'Untitled step',
+    titleEn: c.title || 'Untitled step',
+    date: c.date,
+    costCNY: [cost, cost],
+    notes: [],
+  }
+}
+
+let customSeq = 0
+export const newCustomId = () => `custom-${Date.now().toString(36)}-${(customSeq++).toString(36)}`
+
 // Arrival is "imminent" below this many days, which switches the roadmap into
 // triage mode: the this-week card turns urgent and deferrable steps are pushed
 // to week two.
@@ -88,36 +107,50 @@ export function daysLabel(daysLeft) {
  * Build the personalised roadmap.
  * Deadlines are arrivalDate + offsetDays; negative offsets fall before arrival.
  *
- * `user` carries everything the student has done to the roadmap on this
- * device: { checked }.
+ * `user` carries everything the student has changed on this device:
+ *   checked  { [id]: true }          ticked off
+ *   hidden   { [id]: true }          "not relevant to me" — left out of totals
+ *   due      { [id]: 'YYYY-MM-DD' }  a due date the student moved by hand
+ *   custom   [{ id, title, date, stage, cost }]  student-added steps
  */
 export function buildRoadmap(answers, user = {}, now = todayFn()) {
-  const checked = user.checked || {}
+  const { checked = {}, hidden = {}, due = {}, custom = [] } = user
   const arrival = parseDay(answers?.arrivalDate)
   if (!arrival) return null
 
   const daysUntilArrival = daysBetween(now, arrival)
   const lateArrival = daysUntilArrival >= 0 && daysUntilArrival < LATE_ARRIVAL_DAYS
 
-  let steps = STEPS.filter((s) => appliesTo(s, answers)).map((s) => {
-    const deadline = addDays(arrival, s.offsetDays)
-    return {
-      ...s,
-      deadline,
-      effectiveOffset: s.offsetDays,
-      daysLeft: daysBetween(now, deadline),
-      done: !!checked[s.id],
-      deferred: false,
-      shortStay: answers.degree === 'exchange',
-    }
+  const place = (s, deadline, extra = {}) => ({
+    ...s,
+    deadline,
+    effectiveOffset: daysBetween(arrival, deadline),
+    daysLeft: daysBetween(now, deadline),
+    done: !!checked[s.id],
+    deferred: false,
+    shortStay: answers.degree === 'exchange',
+    ...extra,
   })
+
+  const seeded = STEPS.filter((s) => appliesTo(s, answers)).map((s) => {
+    const suggested = addDays(arrival, s.offsetDays)
+    const moved = parseDay(due[s.id])
+    return place(s, moved || suggested, { suggestedDeadline: suggested, moved: !!moved })
+  })
+  const added = custom
+    .filter((c) => parseDay(c.date))
+    .map((c) => place(customToStep(c), parseDay(c.date), { suggestedDeadline: null, moved: false }))
+
+  const all = [...seeded, ...added]
+  let steps = all.filter((s) => !hidden[s.id])
+  const hiddenSteps = all.filter((s) => hidden[s.id])
 
   // Triage: when arrival is close, anything deferrable that is not in this
   // week's three is pushed to the start of week two.
   if (lateArrival) {
     const firstIds = new Set(pickThisWeek(steps).map((s) => s.id))
     steps = steps.map((s) => {
-      if (!s.deferrable || s.done || firstIds.has(s.id) || s.offsetDays >= 7) return s
+      if (!s.deferrable || s.done || s.moved || firstIds.has(s.id) || s.offsetDays >= 7) return s
       const offset = 7 // start of week two
       const deadline = addDays(arrival, offset)
       return {
@@ -130,6 +163,7 @@ export function buildRoadmap(answers, user = {}, now = todayFn()) {
     })
   }
 
+  // Stable sort: on equal dates, seed order (then custom steps) is kept.
   steps.sort((a, b) => a.effectiveOffset - b.effectiveOffset)
 
   const byStage = STAGES.map((stage) => ({
@@ -145,6 +179,7 @@ export function buildRoadmap(answers, user = {}, now = todayFn()) {
 
   const preArrival = steps.filter((s) => s.effectiveOffset < 0)
   const firstThirty = steps.filter((s) => s.effectiveOffset >= 0 && s.effectiveOffset <= 30)
+  const later = steps.filter((s) => s.effectiveOffset > 30)
 
   const livingFirstMonth = [LIVING_COST_PER_WEEK_CNY[0] * 4, LIVING_COST_PER_WEEK_CNY[1] * 4]
   const firstThirtyStepCost = sum(firstThirty)
@@ -168,6 +203,7 @@ export function buildRoadmap(answers, user = {}, now = todayFn()) {
     daysUntilArrival,
     lateArrival,
     steps,
+    hiddenSteps,
     byStage,
     thisWeek: pickThisWeek(steps),
     nextStep,
@@ -176,6 +212,7 @@ export function buildRoadmap(answers, user = {}, now = todayFn()) {
     totalCount: steps.length,
     preArrivalCost: sum(preArrival),
     firstThirtyCost,
+    laterCost: sum(later),
     cashflow: answers.funding === 'self' ? buildCashflow(firstThirty, arrival) : null,
   }
 }
