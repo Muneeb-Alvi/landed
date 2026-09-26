@@ -19,6 +19,7 @@ export default function App() {
   const [due, setDue] = useStored('due')
   const [custom, setCustom] = useStored('custom')
   const [myNotes, setMyNotes] = useStored('myNotes')
+  const [followUps, setFollowUps] = useStored('followUps')
 
   const [toast, setToast] = useState(null)
   const toastSeq = useRef(0)
@@ -27,8 +28,10 @@ export default function App() {
 
   const roadmap = useMemo(
     () =>
-      answers?.arrivalDate ? buildRoadmap(answers, { checked, hidden, due, custom }) : null,
-    [answers, checked, hidden, due, custom]
+      answers?.arrivalDate
+        ? buildRoadmap(answers, { checked, hidden, due, custom, followUps })
+        : null,
+    [answers, checked, hidden, due, custom, followUps]
   )
 
   const toggle = (setter) => (key) => setter((m) => ({ ...m, [key]: !m[key] }))
@@ -84,6 +87,9 @@ export default function App() {
             }),
         },
       })
+    },
+    answerFollowUp(key, value) {
+      setFollowUps((f) => (value === undefined ? without(f, key) : { ...f, [key]: value }))
     },
     setMyNote(id, text) {
       setMyNotes((n) => (text ? { ...n, [id]: text } : without(n, id)))
@@ -142,6 +148,7 @@ export default function App() {
               upvotes={upvotes}
               flags={flags}
               myNotes={myNotes}
+              followUps={followUps}
               actions={actions}
             />
           }
@@ -154,20 +161,25 @@ export default function App() {
   )
 }
 
-function StepDetailRoute({ roadmap, answers, upvotes, flags, myNotes, actions }) {
+function StepDetailRoute({ roadmap, answers, upvotes, flags, myNotes, followUps, actions }) {
   const { id } = useParams()
   const navigate = useNavigate()
 
   if (!roadmap) return <Navigate to="/onboarding" replace />
 
   const index = roadmap.steps.findIndex((s) => s.id === id)
-  const step = index >= 0 ? roadmap.steps[index] : roadmap.hiddenSteps.find((s) => s.id === id)
+  const hiddenStep = roadmap.hiddenSteps.find((s) => s.id === id)
+  const skippedStep = roadmap.skippedSteps.find((s) => s.id === id)
+  const step = index >= 0 ? roadmap.steps[index] : hiddenStep || skippedStep
   if (!step) return <Navigate to="/roadmap" replace />
 
   return (
     <StepDetail
       step={step}
-      isHidden={index < 0}
+      isHidden={!!hiddenStep}
+      isSkipped={!!skippedStep}
+      answers={answers}
+      followUps={followUps}
       notes={stepNotes(step, answers, upvotes)}
       upvotes={upvotes}
       flags={flags}

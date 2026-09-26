@@ -16,6 +16,88 @@ import {
 import { STAGE_BY_ID, STAGES } from '../data/stages.js'
 import { formatDay, formatNoteDate, isStale, toISODay } from '../lib/date.js'
 import { formatRange, sortFlags } from '../lib/roadmap.js'
+import { whyLine } from '../lib/verdict.js'
+
+const VERDICT_TEXT = {
+  yes: { zh: '需要', en: 'YES', sub: { zh: '适用于你', en: 'Applies to you' } },
+  no: { zh: '不需要', en: 'NO', sub: { zh: '不适用于你', en: "Doesn't apply to you" } },
+  maybe: { zh: '待确认', en: 'MAYBE', sub: { zh: '取决于一个问题', en: 'Depends on one answer' } },
+}
+
+/** 我需要做吗？ — the verdict pill, its reason and, for MAYBE, the follow-up. */
+function VerdictBlock({ step, answers, followUps, onAnswer }) {
+  const v = step.verdict
+  const t = VERDICT_TEXT[v.verdict]
+  const why = whyLine(step, answers, followUps)
+  return (
+    <section className={`verdict ${v.verdict}`} aria-labelledby="verdict-title">
+      <h2 className="card-label" id="verdict-title">
+        <L zh="我需要做吗？" en="Do I need this?" />
+      </h2>
+      <p className="verdict-row">
+        <span className={`verdict-pill ${v.verdict}`}>
+          <span className="lz">{t.zh}</span>
+          <span className="lsep"> · </span>
+          <span className="le">{t.en}</span>
+        </span>
+        <span className="verdict-sub">
+          <L zh={t.sub.zh} en={t.sub.en} />
+        </span>
+      </p>
+      {v.reason && v.verdict !== 'yes' && (
+        <p className="verdict-reason">
+          <span className="lz">{v.reason.zh}</span>
+          <span className="le">{v.reason.en}</span>
+        </p>
+      )}
+
+      {v.question && !v.answered && (
+        <div className="followup" role="group" aria-labelledby="fu-q">
+          <p id="fu-q" className="followup-q">
+            <span className="lz">{v.question.zh}</span>
+            <span className="le">{v.question.en}</span>
+          </p>
+          <div className="form-actions">
+            <button type="button" className="btn small" onClick={() => onAnswer(v.question.key, true)}>
+              <L zh="是" en="Yes" />
+            </button>
+            <button
+              type="button"
+              className="btn secondary small"
+              onClick={() => onAnswer(v.question.key, false)}
+            >
+              <L zh="否" en="No" />
+            </button>
+          </div>
+        </div>
+      )}
+      {v.question && v.answered && (
+        <p className="followup-done">
+          <span className="le">
+            {v.question.en} — you said {followUps[v.question.key] ? 'yes' : 'no'}.
+          </span>
+          <button
+            type="button"
+            className="text-btn"
+            onClick={() => onAnswer(v.question.key, undefined)}
+          >
+            <L zh="修改" en="Change" />
+          </button>
+        </p>
+      )}
+
+      {v.verdict !== 'no' && (
+        <p className="why">
+          <span className="why-label">
+            <L zh="为什么会看到这一步" en="Why you're seeing this" />
+          </span>
+          <span className="lz">{why.zh}</span>
+          <span className="le">{why.en}</span>
+        </p>
+      )}
+    </section>
+  )
+}
 
 function Note({ note, upvoted, flagged, onUpvote, onFlag }) {
   const stale = isStale(note.date)
@@ -199,6 +281,9 @@ function MyNotes({ stepId, value, onChange }) {
 export default function StepDetail({
   step,
   isHidden,
+  isSkipped,
+  answers,
+  followUps,
   notes,
   upvotes,
   flags,
@@ -257,7 +342,9 @@ export default function StepDetail({
               <L zh="状态" en="Status" />
             </p>
             <p className="f-value">
-              {isHidden
+              {isSkipped
+                ? '不适用 Not for you'
+                : isHidden
                 ? '已隐藏 Hidden'
                 : step.done
                   ? '已完成 Done'
@@ -288,6 +375,12 @@ export default function StepDetail({
       </div>
 
       <div className="section detail-body">
+        <VerdictBlock
+          step={step}
+          answers={answers}
+          followUps={followUps}
+          onAnswer={actions.answerFollowUp}
+        />
         {isHidden && (
           <div className="card accent" role="note">
             <p className="card-label">
@@ -362,13 +455,15 @@ export default function StepDetail({
           </>
         )}
 
-        <PlanBlock
-          step={step}
-          isHidden={isHidden}
-          actions={actions}
-          onHide={onHide}
-          onDelete={onDelete}
-        />
+        {!isSkipped && (
+          <PlanBlock
+            step={step}
+            isHidden={isHidden}
+            actions={actions}
+            onHide={onHide}
+            onDelete={onDelete}
+          />
+        )}
         <MyNotes stepId={step.id} value={myNote} onChange={actions.setMyNote} />
 
         {!step.custom && (
@@ -404,7 +499,7 @@ export default function StepDetail({
         <button type="button" className="btn secondary back" onClick={onBack} aria-label="Back">
           <ArrowLeft size={20} />
         </button>
-        {!isHidden && (
+        {!isHidden && !isSkipped && (
           <button type="button" className="btn" onClick={() => actions.toggleStep(step.id)}>
             {step.done ? (
               <span>

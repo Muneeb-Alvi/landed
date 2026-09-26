@@ -20,6 +20,11 @@
  *   costCNY      — [low, high] in CNY
  *   shortStayTip — extra line shown to one-semester exchange students
  *   deferrable   — may be pushed to week two when the arrival date is imminent
+ *   skipReason   — { zh, en } shown when appliesTo rules the step out ("NO")
+ *   maybeIf      — { when, key, question: { zh, en }, appliesIf, no: { zh, en } }
+ *                  When `when` matches the answers, the step is a MAYBE until the
+ *                  student answers `question`. followUps[key] === appliesIf keeps
+ *                  it; anything else turns it into a NO with the `no` reason.
  *   hard         — a fixed deadline (legal clock or closing window); feeds KEY DATES
  *   redFlags     — [{ level: 'high'|'med'|'low', zh, en }] SAMPLE warnings, each
  *                  restating something already in this step's notes or requirement
@@ -108,6 +113,10 @@ export const STEPS = [
     titleEn: 'Apply for an on-campus dorm',
     offsetDays: -95,
     appliesTo: { housing: ['dorm'] },
+    skipReason: {
+      zh: '你选择了校外住宿。',
+      en: "You're living off campus.",
+    },
     officialRequirement:
       'On-campus accommodation is applied for separately from admission and is allocated while places remain. A deposit is payable at check-in.',
     officialSourceUrl: 'https://example.org/landed-placeholder/housing-application',
@@ -143,6 +152,10 @@ export const STEPS = [
     titleEn: 'Find off-campus housing',
     offsetDays: -90,
     appliesTo: { housing: ['offcampus'] },
+    skipReason: {
+      zh: '你将住在校内宿舍。',
+      en: "You're living in a campus dorm.",
+    },
     officialRequirement:
       'Students living off campus must have a tenancy contract and the landlord’s property ownership document, both of which are needed for accommodation registration after arrival.',
     officialSourceUrl: 'https://example.org/landed-placeholder/off-campus-housing',
@@ -185,6 +198,16 @@ export const STEPS = [
     titleZh: '境外体格检查表',
     titleEn: 'Foreigner physical examination form',
     offsetDays: -75,
+    maybeIf: {
+      when: { degree: ['exchange'] },
+      key: 'staysOver180',
+      question: { zh: '你会在中国停留超过180天吗？', en: 'Will you stay longer than 180 days?' },
+      appliesIf: true,
+      no: {
+        zh: '停留不超过180天通常不需要完整体检表——付费前请先确认。',
+        en: 'Stays of 180 days or less often skip the full form — confirm before paying for the panel.',
+      },
+    },
     officialRequirement:
       'Students staying longer than six months complete the Foreigner Physical Examination Form at an approved clinic, including blood tests, chest imaging and an ECG. Results are generally valid for six months.',
     officialSourceUrl: 'https://example.org/landed-placeholder/physical-examination',
@@ -258,6 +281,10 @@ export const STEPS = [
     titleEn: 'Apply for the X1 student visa',
     offsetDays: -50,
     appliesTo: { degree: ['bachelor', 'master', 'phd'] },
+    skipReason: {
+      zh: '一学期交换生申请X2签证，而不是X1。',
+      en: "One-semester exchange students on an X2 visa skip this — the X1 covers stays over 180 days.",
+    },
     officialRequirement:
       'The X1 visa covers study of more than 180 days. Submit the visa form, passport, admission notice, JW202 and physical examination form. The X1 is an entry visa only — a residence permit must be applied for after arrival.',
     officialSourceUrl: 'https://example.org/landed-placeholder/x1-visa',
@@ -300,6 +327,10 @@ export const STEPS = [
     titleEn: 'Apply for the X2 short-stay study visa',
     offsetDays: -50,
     appliesTo: { degree: ['exchange'] },
+    skipReason: {
+      zh: '全日制学位学生申请X1签证。',
+      en: "Full-degree students apply for the X1 visa instead.",
+    },
     officialRequirement:
       'The X2 visa covers study of 180 days or less. It is normally issued as a single-entry visa with a fixed duration of stay and does not convert to a residence permit.',
     officialSourceUrl: 'https://example.org/landed-placeholder/x2-visa',
@@ -336,6 +367,10 @@ export const STEPS = [
     titleEn: 'Dependent visas (S1 / S2)',
     offsetDays: -45,
     appliesTo: { family: true },
+    skipReason: {
+      zh: '只在有家属同行时需要。',
+      en: "Only needed when family travels with you.",
+    },
     officialRequirement:
       'Family members accompanying a student apply for S1 (over 180 days) or S2 (180 days or less) visas. Each application needs proof of relationship — a marriage or birth certificate — usually notarised and translated.',
     officialSourceUrl: 'https://example.org/landed-placeholder/dependent-visa',
@@ -440,7 +475,20 @@ export const STEPS = [
     titleZh: '准备现金与可用银行卡',
     titleEn: 'Arrange cash and card access',
     offsetDays: -21,
-    appliesTo: { funding: ['self'] },
+    appliesTo: { funding: ['self', 'scholarship'] },
+    maybeIf: {
+      when: { funding: ['scholarship'] },
+      key: 'stipendBeforeArrival',
+      question: {
+        zh: '你的奖学金会在抵达第一周之前发放吗？',
+        en: 'Will your scholarship pay out before your first week?',
+      },
+      appliesIf: false,
+      no: {
+        zh: '奖学金能覆盖第一周，额外的现金准备可以跳过。',
+        en: 'Your scholarship covers week one, so the extra cash buffer is optional.',
+      },
+    },
     officialRequirement:
       'There is no official minimum, but several arrival-week payments are made before a local bank account can be opened. Check your home bank’s daily withdrawal limit abroad.',
     officialSourceUrl: 'https://example.org/landed-placeholder/payments-on-arrival',
@@ -564,6 +612,10 @@ export const STEPS = [
     titleEn: 'Accommodation registration at the local police station',
     offsetDays: 1,
     appliesTo: { housing: ['offcampus'] },
+    skipReason: {
+      zh: '校内宿舍住户不需要单独到派出所登记。',
+      en: "Only needed outside a hotel or campus dorm — you're in a dorm.",
+    },
     officialRequirement:
       'Foreign nationals not staying in a hotel or campus dorm must register their address at the local police station within 24 hours of arrival. Bring your passport, tenancy contract and the landlord’s property ownership document. The landlord normally has to attend.',
     officialSourceUrl: 'https://example.org/landed-placeholder/accommodation-registration',
@@ -606,6 +658,10 @@ export const STEPS = [
     titleEn: 'Dependent accommodation registration',
     offsetDays: 2,
     appliesTo: { family: true },
+    skipReason: {
+      zh: '只在有家属同行时需要。',
+      en: "Only needed when family travels with you.",
+    },
     officialRequirement:
       'Each accompanying family member registers their accommodation in their own name within 24 hours of arrival, including children. Dependants on S1 visas also apply for their own residence permits.',
     officialSourceUrl: 'https://example.org/landed-placeholder/dependent-registration',
@@ -748,6 +804,10 @@ export const STEPS = [
     titleEn: 'Health check verification',
     offsetDays: 6,
     appliesTo: { degree: ['bachelor', 'master', 'phd'] },
+    skipReason: {
+      zh: '核验用于居留许可，X2签证不需要居留许可。',
+      en: "The verification feeds the residence permit, which X2 exchange students don't get.",
+    },
     officialRequirement:
       'The overseas physical examination is verified after arrival at a designated health centre. If any test is missing or unrecognised it must be repeated locally, and the verification certificate is required for the residence permit.',
     officialSourceUrl: 'https://example.org/landed-placeholder/health-verification',
@@ -820,6 +880,10 @@ export const STEPS = [
     titleEn: 'Open a bank account',
     offsetDays: 12,
     appliesTo: { degree: ['bachelor', 'master', 'phd'] },
+    skipReason: {
+      zh: '一学期交换通常用绑定外卡的移动支付即可。',
+      en: "Hidden for one-semester exchange — short stays usually get by on mobile pay with a foreign card.",
+    },
     officialRequirement:
       'Opening an account requires your passport with a valid visa or residence permit, a local mobile number and usually a student certificate or proof of address. Requirements differ between banks and branches.',
     officialSourceUrl: 'https://example.org/landed-placeholder/bank-account',
@@ -860,6 +924,10 @@ export const STEPS = [
     titleEn: 'Residence permit (within 30 days of entry)',
     offsetDays: 16,
     appliesTo: { degree: ['bachelor', 'master', 'phd'] },
+    skipReason: {
+      zh: 'X2签证（180天以内）不转居留许可。',
+      en: "Exchange students on an X2 visa (180 days or less) don't convert to a residence permit.",
+    },
     officialRequirement:
       'Holders of an X1 visa must apply for a residence permit at the exit-entry administration within 30 days of entry. The application needs the health verification certificate, accommodation registration, a university letter and photos. Overstaying carries a fine.',
     officialSourceUrl: 'https://example.org/landed-placeholder/residence-permit',

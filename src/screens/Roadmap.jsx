@@ -7,6 +7,7 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Close,
   Coins,
   EyeOff,
   FileSearch,
@@ -129,6 +130,11 @@ function StepRow({ step, actions, onOpen }) {
           <span className={`days-badge ${badge.tone}`}>{badge.text}</span>
           {step.costCNY[1] > 0 && <span className="date-badge">{formatRange(step.costCNY)}</span>}
           <FlagChips summary={flagSummary(step)} />
+          {step.verdict?.verdict === 'maybe' && (
+            <span className="tag maybe">
+              <L zh="待确认" en="Maybe" />
+            </span>
+          )}
           {step.custom && (
             <span className="tag">
               <L zh="自定义" en="Your step" />
@@ -304,7 +310,8 @@ function AddStepForm({ defaultDate, onAdd, onClose }) {
   )
 }
 
-function HiddenSteps({ steps, onRestore, onOpen }) {
+/** A folded list of steps that are off the timeline: hidden, or not for you. */
+function FoldList({ id, icon, zh, en, steps, onOpen, renderAction, renderNote }) {
   const [open, setOpen] = useState(false)
   if (steps.length === 0) return null
   return (
@@ -314,26 +321,25 @@ function HiddenSteps({ steps, onRestore, onOpen }) {
           type="button"
           className="fold-head"
           aria-expanded={open}
-          aria-controls="hidden-list"
+          aria-controls={id}
           onClick={() => setOpen((o) => !o)}
         >
-          <EyeOff size={18} />
+          {icon}
           <span>
-            <L zh="已隐藏的步骤" en="Hidden steps" /> ({steps.length})
+            <L zh={zh} en={en} /> ({steps.length})
           </span>
           <ChevronDown size={18} className={`s-chev${open ? ' open' : ''}`} />
         </button>
       </h3>
-      <ul id="hidden-list" hidden={!open}>
+      <ul id={id} hidden={!open}>
         {steps.map((s) => (
           <li key={s.id} className="hidden-row">
             <button type="button" className="hidden-open" onClick={() => onOpen(s.id)}>
               <span className="st-zh">{s.titleZh}</span>
               <span className="st-en">{s.titleEn}</span>
+              {renderNote && <span className="hidden-note">{renderNote(s)}</span>}
             </button>
-            <button type="button" className="btn secondary small" onClick={() => onRestore(s.id)}>
-              <L zh="恢复" en="Restore" />
-            </button>
+            {renderAction && renderAction(s)}
           </li>
         ))}
       </ul>
@@ -542,7 +548,37 @@ export default function Roadmap({ answers, roadmap, actions, onOpen, onEdit, onC
           </button>
         )}
 
-        <HiddenSteps steps={roadmap.hiddenSteps} onRestore={actions.restoreStep} onOpen={onOpen} />
+        <FoldList
+          id="hidden-list"
+          icon={<EyeOff size={18} />}
+          zh="已隐藏的步骤"
+          en="Hidden steps"
+          steps={roadmap.hiddenSteps}
+          onOpen={onOpen}
+          renderAction={(s) => (
+            <button
+              type="button"
+              className="btn secondary small"
+              onClick={() => actions.restoreStep(s.id)}
+            >
+              <L zh="恢复" en="Restore" />
+            </button>
+          )}
+        />
+        <FoldList
+          id="skipped-list"
+          icon={<Close size={18} />}
+          zh="不适用于你"
+          en="Not for you"
+          steps={roadmap.skippedSteps}
+          onOpen={onOpen}
+          renderNote={(s) => (
+            <>
+              <span className="lz">{s.verdict.reason.zh}</span>
+              <span className="le">{s.verdict.reason.en}</span>
+            </>
+          )}
+        />
       </div>
 
       <div className="detail-dock">

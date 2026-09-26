@@ -1,6 +1,7 @@
 import { STEPS } from '../data/steps.js'
 import { STAGES } from '../data/stages.js'
 import { addDays, daysBetween, parseDay, today as todayFn } from './date.js'
+import { verdictFor } from './verdict.js'
 
 /** A student-added step, shaped like a seed step so it sits in the same timeline. */
 export function customToStep(c) {
@@ -37,16 +38,9 @@ export const THIS_WEEK_COUNT = 3
 // cash-flow card so the weeks reflect real outgoings, not just step fees.
 export const LIVING_COST_PER_WEEK_CNY = [450, 900]
 
-/** Does this step apply to the answers given? Absent conditions mean "everyone". */
-export function appliesTo(step, answers) {
-  const c = step.appliesTo
-  if (!c) return true
-  if (c.degree && !c.degree.includes(answers.degree)) return false
-  if (c.housing && !c.housing.includes(answers.housing)) return false
-  if (c.funding && !c.funding.includes(answers.funding)) return false
-  if (c.campus && !c.campus.includes(answers.campus)) return false
-  if (c.family === true && !answers.family) return false
-  return true
+/** Does this step belong on the roadmap? YES and MAYBE do; NO does not. */
+export function appliesTo(step, answers, followUps = {}) {
+  return verdictFor(step, answers, followUps).verdict !== 'no'
 }
 
 const cohortCampus = (cohort) => (/SIGS/i.test(cohort) ? 'sigs' : 'beijing')
@@ -137,9 +131,10 @@ export function daysLabel(daysLeft) {
  *   hidden   { [id]: true }          "not relevant to me" — left out of totals
  *   due      { [id]: 'YYYY-MM-DD' }  a due date the student moved by hand
  *   custom   [{ id, title, date, stage, cost }]  student-added steps
+ *   followUps { [questionKey]: boolean }   answers to MAYBE questions
  */
 export function buildRoadmap(answers, user = {}, now = todayFn()) {
-  const { checked = {}, hidden = {}, due = {}, custom = [] } = user
+  const { checked = {}, hidden = {}, due = {}, custom = [], followUps = {} } = user
   const arrival = parseDay(answers?.arrivalDate)
   if (!arrival) return null
 
@@ -157,14 +152,27 @@ export function buildRoadmap(answers, user = {}, now = todayFn()) {
     ...extra,
   })
 
-  const seeded = STEPS.filter((s) => appliesTo(s, answers)).map((s) => {
+  const judged = STEPS.map((s) => {
     const suggested = addDays(arrival, s.offsetDays)
     const moved = parseDay(due[s.id])
-    return place(s, moved || suggested, { suggestedDeadline: suggested, moved: !!moved })
+    return place(s, moved || suggested, {
+      suggestedDeadline: suggested,
+      moved: !!moved,
+      verdict: verdictFor(s, answers, followUps),
+    })
   })
+  const seeded = judged.filter((s) => s.verdict.verdict !== 'no')
+  // Steps the answers rule out, kept so the student can see why.
+  const skippedSteps = judged.filter((s) => s.verdict.verdict === 'no')
   const added = custom
     .filter((c) => parseDay(c.date))
-    .map((c) => place(customToStep(c), parseDay(c.date), { suggestedDeadline: null, moved: false }))
+    .map((c) =>
+      place(customToStep(c), parseDay(c.date), {
+        suggestedDeadline: null,
+        moved: false,
+        verdict: { verdict: 'yes' },
+      })
+    )
 
   const all = [...seeded, ...added]
   let steps = all.filter((s) => !hidden[s.id])
@@ -229,6 +237,7 @@ export function buildRoadmap(answers, user = {}, now = todayFn()) {
     lateArrival,
     steps,
     hiddenSteps,
+    skippedSteps,
     byStage,
     thisWeek: pickThisWeek(steps),
     keyDates: pickKeyDates(steps),
